@@ -4,7 +4,7 @@ project(RobotMain)
 
 find_package(RobotLibs REQUIRED)
 
-file(GLOB ROBOT_MAIN_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
+file(GLOB ROBOT_MAIN_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*")
 
 add_executable(RobotMain ${ROBOT_MAIN_SRC})
 target_include_directories(RobotMain PUBLIC ${RobotLibs_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)

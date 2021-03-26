@@ -2,7 +2,7 @@
 #ifndef _SHAREDATA_H
 #define _SHAREDATA_H
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -17,7 +17,7 @@ extern float force_X_sensor2;
 extern char init_finish_flag;
 extern char init_finish_flag1;
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

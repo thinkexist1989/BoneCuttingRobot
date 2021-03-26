@@ -9,7 +9,7 @@
 #ifndef KEY_H_
 #define KEY_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -114,7 +114,7 @@ void RobCtrl_torque_on();
 
 void RobCtrl_torque_off();
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

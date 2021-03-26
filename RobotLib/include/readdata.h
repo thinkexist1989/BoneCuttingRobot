@@ -8,7 +8,7 @@
 #ifndef READDATA_H_
 #define READDATA_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -21,7 +21,7 @@ int getDataName_points(char *ininame, int n, char *dataname);
 int getpoints_file(char *ininame, char *J, double *points);
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

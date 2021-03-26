@@ -8,7 +8,7 @@
 #ifndef ROBOTETHERCAT_H_
 #define ROBOTETHERCAT_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -145,7 +145,7 @@ extern void robot_setvelocity_c(char *ecHName, int *vel);
 
 extern void robot_settorque_c(char *ecHName, short *tor);
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

@@ -3,7 +3,7 @@
 #ifndef KINEMATICINTERFACE_H_
 #define KINEMATICINTERFACE_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -44,7 +44,7 @@ extern int Kine_Inverse(char *serialLinkName, R7_KINE *r7kine);
 extern void robot_getPosKps(char *ecHName, R7_KINE *rkine);
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

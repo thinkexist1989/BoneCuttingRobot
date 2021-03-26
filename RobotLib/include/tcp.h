@@ -2,7 +2,7 @@
 #ifndef INCLUDE_TCP_H_
 #define INCLUDE_TCP_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -46,7 +46,7 @@ void *__Receive_optoforce_fun1(void *arg);
 int RealTimeDataProcess1(void);
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

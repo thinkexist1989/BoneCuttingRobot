@@ -8,7 +8,7 @@
 #ifndef ROBOTSTRUCT_H_
 #define ROBOTSTRUCT_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -138,7 +138,7 @@ typedef struct MoveBSArg {
     int index;
 } MoveBSArg;
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

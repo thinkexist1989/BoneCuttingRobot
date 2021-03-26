@@ -9,7 +9,7 @@
 #define ROBOTLIB_H_
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -281,7 +281,7 @@ extern int getDataName(robdatatype rdt, int n, char *dataname);
 extern int robot_getDOF(int _index);
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

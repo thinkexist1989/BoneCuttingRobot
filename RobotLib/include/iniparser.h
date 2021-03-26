@@ -17,7 +17,7 @@
 #ifndef _INIPARSER_H_
 #define _INIPARSER_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -312,7 +312,7 @@ void iniparser_freedict(dictionary *d);
 dictionary *iniparser_newdict(int size);
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

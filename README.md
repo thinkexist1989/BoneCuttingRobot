@@ -19,5 +19,6 @@ $ make -j`nproc`
 
 ### Contributor
 
-:bust_in_silhouette:**Yang Luo** [Email: luoyang@sia.cn](mailto:luoyang@sia.cn)
-:bust_in_silhouette:**Shun Su**[Email: liyingli@sia.cn](mailto:liyingli@sia.cn)
+:bust_in_silhouette:**Yang Luo**  [Email: luoyang@sia.cn](mailto:luoyang@sia.cn)
+
+:bust_in_silhouette:**Yingli Li**  [Email: liyingli@sia.cn](mailto:liyingli@sia.cn)

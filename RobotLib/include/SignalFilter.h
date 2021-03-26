@@ -1,7 +1,7 @@
 #ifndef SIGNALFILTER_H_
 #define SIGNALFILTER_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -11,7 +11,7 @@ int LowPass_order1(double f, double Ts, double *y, double *u);
 
 int LowPass_order2(double f, double b, double Ts, double *y, double *u);
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

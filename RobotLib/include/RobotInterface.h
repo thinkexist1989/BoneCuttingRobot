@@ -8,7 +8,7 @@
 #ifndef ROBOTINTERFACE_H_
 #define ROBOTINTERFACE_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -61,7 +61,7 @@ extern void robot_setvelocity_angular(char *ecHName, double *angular);
 extern void robot_settorque_torque(char *ecHName, double *torque);
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

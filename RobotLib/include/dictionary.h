@@ -23,7 +23,7 @@
 #ifndef _DICTIONARY_H_
 #define _DICTIONARY_H_
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -175,7 +175,7 @@ void dictionary_unset(dictionary *d, char *key);
 /*--------------------------------------------------------------------------*/
 void dictionary_dump(dictionary *d, FILE *out);
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 
