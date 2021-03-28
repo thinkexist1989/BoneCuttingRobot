@@ -10,14 +10,14 @@
 #
 # Results for users are reported in following variables::
 #
-#    RobotLib_FOUND                - Return "TRUE" when RobotLib found. Otherwise, Return "FALSE".
-#    RobotLib_INCLUDE_DIRS         - RobotLib include directories.
-#    RobotLib_LIBRARY_DIRS         - RobotLib library directories.
-#    RobotLib_LIBRARIES            - RobotLib library files.
+#    RobotLibs_FOUND                - Return "TRUE" when RobotLib found. Otherwise, Return "FALSE".
+#    RobotLibs_INCLUDE_DIRS         - RobotLib include directories.
+#    RobotLibs_LIBRARY_DIRS         - RobotLib library directories.
+#    RobotLibs_LIBRARIES            - RobotLib library files.
 #
 # CMake entries::
 #
-#    RobotLib_DIR                  - RobotLib root directory. (Default ${CMAKE_SOURCE_DIR}/RobotLib)
+#    RobotLibs_DIR                  - RobotLib root directory. (Default ${CMAKE_SOURCE_DIR}/RobotLib)
 #
 # Example to find Kinect SDK v2::
 #

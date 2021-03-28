@@ -11,7 +11,16 @@
 #define TORQUECONTROL_H_
 #define OFFSETPOSE_INIFILE "/hanbing/data/offsetpose.POINT"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 void torqueControl();
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* TORQUECONTROL_H_ */

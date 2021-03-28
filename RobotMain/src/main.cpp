@@ -1,14 +1,15 @@
 /*
- * main.c
+ * main.cpp
  *
  *  Created on: 2019-12-2
  *      Author: Liyingli
+ *      modified by: Yang Luo 2021.03.28
  */
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "functionTest.h"
-#include"RobotControl.h"
+//#include"RobotControl.h"
 #include "RobotLib.h"
 #include "tcp.h"
 
