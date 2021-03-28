@@ -111,7 +111,6 @@ if (RobotLibs_FOUND)
                             RobotExtenLibs
                             RobotLib
                             RobotControlerAPI
-                            RobotControlLib
                             BaseLib
                             DynamicsLib
                             GripLib
