@@ -8,7 +8,7 @@
 
 class RobotControl {
 public:
-    RobotControl(unsigned int control_period = 0);
+    RobotControl(unsigned int control_period_ms = 0);
     virtual ~RobotControl() = 0; // pure virual deconstructor
     void run(); //define robot control running framework (Template Method)
 
@@ -17,7 +17,7 @@ protected:
     virtual void control_loop() = 0; //robot control loop, the program will loop call
 
     bool stopped = false; //stop flag
-    std::size_t control_period = 0; // control period
+    unsigned int control_period_ms = 0; // control period
 
 };
 

@@ -440,6 +440,8 @@ void torqueControl()
 	 }
 	 free(roffsetpose);
 	 free(roffsetpose_forceflag);
+
+	 printf("All is OK!");
 	 
 }
 

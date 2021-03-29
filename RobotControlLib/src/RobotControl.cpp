@@ -5,7 +5,7 @@
 #include "RobotControl.h"
 #include <thread>
 
-RobotControl::RobotControl(unsigned int control_period) {
+RobotControl::RobotControl(unsigned int control_period_ms) : control_period_ms(control_period_ms) {
 
 }
 
@@ -21,7 +21,7 @@ void RobotControl::run() {
         // call once every loop
         control_loop();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(control_period));
+        std::this_thread::sleep_for(std::chrono::milliseconds(control_period_ms));
     }
 }
 
