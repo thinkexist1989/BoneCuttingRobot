@@ -1,0 +1,93 @@
+#!/bin/bash
+
+# Program: This script can copy robot files to destination.
+# Author:  Yang Luo
+# Create:  2021.4.22 15:00
+# Last modified: 2021.4.22 22:23
+
+echo ">>>>=====Robot Libs Copy Script=====<<<<"
+
+echo "> Usage:"
+echo "> LibCopy.sh [-l] [-m] [-c]"
+echo "> Description:"
+echo "> -l copy all libs under the dir RobotLibs."
+echo "> -m copy executable RobotMain."
+echo "> -c copy libRobotControlLib.so under the dir RobotControlLib."
+
+LIBS="/usr/lib" # The directory of robot libs (include libRobotControlLib.so)
+MAIN="/robot"   # The directory of RobotMain
+
+ROBOTLIBS_SOURCE="@PROJECT_SOURCE_DIR@/RobotLib/lib/*.so*"
+ROBOTCONTROLLIB_SOURCE="@PROJECT_BINARY_DIR@/RobotControlLib/libRobotControlLib.so"
+ROBOTMAIN_SOURCE="@PROJECT_BINARY_DIR@/RobotMain/RobotMain"
+
+if [ "$#" -lt 1 ]; then
+    read -p "Default arguments is -lmc. Are you sure?[Y/N]: " yn
+    if [ "${yn}" == "Y" ] || [ "${yn}" == "y" ]; then
+        echo "OK, continue."
+        COPY_LIBS='true'
+        COPY_ROBOTMAIN='true'
+        COPY_CONTROL='true'
+    elif [ "${yn}" == "N" ] || [ "${yn}" == "n" ]; then
+        echo "Please rerun the script with args."
+        exit 0
+    else
+        echo "Please input Y/N. "
+    fi
+fi
+
+while getopts 'lmcr:' OPT; do
+    case $OPT in
+        l)
+        echo "Copy RobobLibs/*.so* to destination."
+        COPY_LIBS='true'
+        ;;
+        m)
+        echo "Copy RobotMain to destination."
+        COPY_ROBOTMAIN='true'
+        ;;
+        c)
+        echo "Copy libRobotControlLib.so to destination."
+        COPY_CONTROL='true'
+        ;;
+        r)
+        echo "Copy libs to remote host $OPTARG . "
+        REMOTE=$OPTARG
+        ;;
+        *)
+        echo "Undefined Options $OPT"
+        ;;
+    esac
+done
+
+# Process Libs
+if [ ! -n "${COPY_LIBS}" ]; then
+    if [ ! -n "${REMOTE}" ]; then
+        scp "${ROBOTLIBS_SOURCE}" ${REMOTE}:${LIBS}
+    else
+        cp  "${ROBOTLIBS_SOURCE}" ${LIBS}
+    fi
+fi
+# Process RobotControlLib
+if [ ! -n "${COPY_ROBOTMAIN}" ]; then
+    if [ ! -n "${REMOTE}" ]; then
+        scp "${ROBOTMAIN_SOURCE}" ${REMOTE}:${LIBS}
+    else
+        cp  "${ROBOTMAIN_SOURCE}" ${LIBS}
+    fi
+fi
+
+if [ ! -n "${COPY_CONTROL}" ]; then
+    if [ ! -n "${REMOTE}" ]; then
+        scp "${ROBOTCONTROLLIB_SOURCE}" ${REMOTE}:${LIBS}
+    else
+        cp  "${ROBOTCONTROLLIB_SOURCE}" ${LIBS}
+    fi
+fi
+
+
+
+
+
+
+

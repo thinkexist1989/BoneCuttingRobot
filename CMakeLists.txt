@@ -12,3 +12,5 @@ message(STATUS "RobotLibs: ${RobotLibs_LIBRARIES}")
 
 add_subdirectory(RobotControlLib)
 add_subdirectory(RobotMain)
+
+configure_file(LibCopy.sh.in ${PROJECT_BINARY_DIR}/LibCopy.sh @ONLY)
