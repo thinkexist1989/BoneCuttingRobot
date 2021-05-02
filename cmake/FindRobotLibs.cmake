@@ -87,7 +87,9 @@ set(RobotLibs_FOUND TRUE)
 
 #Root Directory
 if (RobotLibs_FOUND)
-    set(RobotLibs_DIR ${CMAKE_SOURCE_DIR}/RobotLib)
+    if(NOT RobotLibs_DIR)
+        set(RobotLibs_DIR ${CMAKE_SOURCE_DIR}/RobotLib)
+    endif()
     check_dir(RobotLibs_DIR)
 endif ()
 

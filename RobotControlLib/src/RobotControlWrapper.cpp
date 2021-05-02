@@ -28,26 +28,26 @@ void* PthControlF(void*  arg)
 
 int MainControl()
 {
-    int err=0;
-
-    pthread_attr_init( &attr );
-    pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
-
-
-
-    err = pthread_create(&PthKey, &attr, thread_key, NULL);
-    if (err != 0)
-    {
-        printf("PthKey error\n");
-        return err;
-    }
-
-    err = pthread_create(&PthControl, &attr, PthControlF, NULL);
-    if (err != 0)
-    {
-        printf("PthTorqueControl error\n");
-        return err;
-    }
+//    int err=0;
+//
+//    pthread_attr_init( &attr );
+//    pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+//
+//
+//
+//    err = pthread_create(&PthKey, &attr, thread_key, NULL);
+//    if (err != 0)
+//    {
+//        printf("PthKey error\n");
+//        return err;
+//    }
+//
+//    err = pthread_create(&PthControl, &attr, PthControlF, NULL);
+//    if (err != 0)
+//    {
+//        printf("PthTorqueControl error\n");
+//        return err;
+//    }
 
 
     return 0;

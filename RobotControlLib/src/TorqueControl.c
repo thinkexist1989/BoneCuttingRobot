@@ -58,18 +58,18 @@ void torqueControl()
      int inquery_pose_p1005 = 65535;
 
 
-	 float get_X_sensor1;
-	 	 float get_Y_sensor1;
-		  	 float get_Z_sensor1;
+	 float get_X_sensor1; //力传感器X向力
+	 	 float get_Y_sensor1; //力传感器Y向力
+		  	 float get_Z_sensor1; //力传感器Z向力
 
-	 float get_X_sensor1_afterFilter;
-	 float get_X_sensor1_afterFilter_last;
-	 float get_X_sensor1_dot;
+	 float get_X_sensor1_afterFilter; //力传感器X向滤波后的数据（X向下为正）
+	 float get_X_sensor1_afterFilter_last; //
+	 float get_X_sensor1_dot; //力变化率
 
 	 double Torque_filter_in[3][3];
 	 double Torque_filter_out[3][3];
 
-	 unsigned char first_into_loop = 1;
+	 unsigned char first_into_loop = 1; // 是否是第一次进入循环标志
 	 
 	 float  Force_d             = 0.0;
 	 float  Force_error         = 0.0;

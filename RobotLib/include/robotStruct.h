@@ -27,43 +27,43 @@ typedef struct {
     controller_mode mode;
 } command_arg;
 
-//�ؽڽǶ�,��λ����
+// joint position angle in rad, max 10
 typedef struct robjoint {
     double angle[10];
     int dof;
 } robjoint;
 
-//�ѿ���ռ�λ������̬����λ��mm,rad
+// robot position and orientation of end-effector in mm and rad
 typedef struct robpose {
     double xyz[3];
     double kps[3];
 } robpose;
 
-//�ؽ��ٶȣ�ĩ�����ٶȺ���ת�ٶ�
+// robot speed
 typedef struct speed {
-    double per[10];
+    double per[10]; // speed of joints
     int per_flag;
-    double tcp;
+    double tcp; // speed of end-effector
     int tcp_flag;
-    double orl;
+    double orl; // speed of tcp
     int orl_flag;
 
     int dof;
 } speed;
 
-
+//
 typedef struct zone {
     int zone_flag;
     double zone_size;
 } zone;
 
-//�������ϵ�ڵѿ���ռ�����Ի�����ĩ�ˣ����������ϵ��λ������̬
+//
 typedef struct tool {
-    int robhold;//�Ƿ�װ����
+    int robhold; //
     robpose tframe;
 } tool;
 
-//�û�����빤�����λ������̬
+//
 typedef struct wobj {
     int robhold;
     int ufprog;
@@ -72,14 +72,14 @@ typedef struct wobj {
     robpose oframe;
 } wobj;
 
-//ö�����
+//
 typedef enum robdatatype {
-    _robjoint,  //��Ӧrobjoint��������ļ�
-    _robpose,   //��Ӧrobpose��������ļ�
-    _speed,     //��Ӧspeed��������ļ�
-    _zone,      //��Ӧzone��������ļ�
-    _tool,      //��Ӧtool��������ļ�
-    _wobj       //��Ӧwobj��������ļ�
+    _robjoint,  //
+    _robpose,   //
+    _speed,     //
+    _zone,      //
+    _tool,      //
+    _wobj       //
 } robdatatype;
 
 typedef struct MoveAArg {
