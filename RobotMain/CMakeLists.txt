@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(RobotMain)
 
 find_package(RobotLibs REQUIRED)
+find_package(Threads REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS system)
 

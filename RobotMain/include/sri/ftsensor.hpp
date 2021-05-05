@@ -39,22 +39,38 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <boost/crc.hpp> //crc32
+#include <boost/function.hpp>
+#include <boost/thread.hpp>
+#include <boost/bind.hpp>
 
+//#define BOOST_THREAD_VERSION 5 //using the v5 version of boost::thread
 #define DELAY_US 500 //tcp delay in us
+#define WAIT_TIME 20 // Max_waiting_time = WAIT_TIME * DELAY_US
 
 
 namespace SRI {
     class FTSensor {
     public:
         explicit FTSensor(SensorComm *pcomm) : commPtr(pcomm) {
-            commPtr->initialize();
+            if (!commPtr->initialize()) {
+                std::cout << "Sensor initializing failed" << std::endl;
+            }
         }
 
         IpAddr getIpAddress() {
-            commPtr->write(generateCommandBuffer(EIP, "?"));
-            while (commPtr->available() == 0) {
-                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return IpAddr();
             }
+
+            commPtr->write(generateCommandBuffer(EIP, "?"));
+
+            int waitTime = 0;
+            while (commPtr->available() == 0 && waitTime < WAIT_TIME) {
+                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+                waitTime++;
+            }
+
             std::vector<int8_t> recvbuf;
             commPtr->read(recvbuf);
             std::string response = extractResponseBuffer(recvbuf, EIP, "?");
@@ -63,10 +79,19 @@ namespace SRI {
         }
 
         bool setIpAddress(const IpAddr &ip) {
-            commPtr->write(generateCommandBuffer(EIP, ip));
-            while (commPtr->available() == 0) {
-                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
             }
+
+            commPtr->write(generateCommandBuffer(EIP, ip));
+
+            int waitTime = 0;
+            while (commPtr->available() == 0 && waitTime < WAIT_TIME) {
+                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+                waitTime++;
+            }
+
             std::vector<int8_t> recvbuf;
             commPtr->read(recvbuf);
             std::string response = extractResponseBuffer(recvbuf, EIP, ip);
@@ -78,10 +103,19 @@ namespace SRI {
         }
 
         MacAddr getMacAddress() {
-            commPtr->write(generateCommandBuffer(EMAC, "?"));
-            while (commPtr->available() == 0) {
-                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return MacAddr();
             }
+
+            commPtr->write(generateCommandBuffer(EMAC, "?"));
+
+            int waitTime = 0;
+            while (commPtr->available() == 0 && waitTime < WAIT_TIME) {
+                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+                waitTime++;
+            }
+
             std::vector<int8_t> recvbuf;
             commPtr->read(recvbuf);
             std::string response = extractResponseBuffer(recvbuf, EMAC, "?");
@@ -90,10 +124,19 @@ namespace SRI {
         }
 
         bool setMacAddress(const MacAddr &mac) {
-            commPtr->write(generateCommandBuffer(EMAC, mac));
-            while (commPtr->available() == 0) {
-                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
             }
+
+            commPtr->write(generateCommandBuffer(EMAC, mac));
+
+            int waitTime = 0;
+            while (commPtr->available() == 0 && waitTime < WAIT_TIME) {
+                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+                waitTime++;
+            }
+
             std::vector<int8_t> recvbuf;
             commPtr->read(recvbuf);
             std::string response = extractResponseBuffer(recvbuf, EIP, mac);
@@ -105,10 +148,19 @@ namespace SRI {
         }
 
         GateAddr getGateWay() {
-            commPtr->write(generateCommandBuffer(EGW, "?"));
-            while (commPtr->available() == 0) {
-                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return GateAddr();
             }
+
+            commPtr->write(generateCommandBuffer(EGW, "?"));
+
+            int waitTime = 0;
+            while (commPtr->available() == 0 && waitTime < WAIT_TIME) {
+                std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+                waitTime++;
+            }
+
             std::vector<int8_t> recvbuf;
             commPtr->read(recvbuf);
             std::string response = extractResponseBuffer(recvbuf, EGW, "?");
@@ -117,7 +169,13 @@ namespace SRI {
         }
 
         bool setGateWay(const GateAddr &gate) {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
+            }
+
             commPtr->write(generateCommandBuffer(EMAC, gate));
+
             while (commPtr->available() == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
@@ -132,6 +190,11 @@ namespace SRI {
         }
 
         NetMask getNetMask() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return NetMask();
+            }
+
             commPtr->write(generateCommandBuffer(ENM, "?"));
             while (commPtr->available() == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
@@ -144,7 +207,13 @@ namespace SRI {
         }
 
         bool setNetMask(const NetMask &mask) {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
+            }
+
             commPtr->write(generateCommandBuffer(ENM, mask));
+
             while (commPtr->available() == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
@@ -159,7 +228,13 @@ namespace SRI {
         }
 
         Gains getChannelGains() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return Gains();
+            }
+
             commPtr->write(generateCommandBuffer(CHNAPG, "?"));
+
             while (commPtr->available() == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
@@ -184,7 +259,13 @@ namespace SRI {
         }
 
         SampleRate getSamplingRate() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return SampleRate();
+            }
+
             commPtr->write(generateCommandBuffer(SMPR, "?"));
+
             while (commPtr->available() == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
@@ -196,8 +277,14 @@ namespace SRI {
         }
 
         bool setSamplingRate(SampleRate rate) {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
+            }
+
             commPtr->write(generateCommandBuffer(SMPR, boost::lexical_cast<std::string>(rate)));
-            while (commPtr->available() == 0) {
+
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -211,8 +298,14 @@ namespace SRI {
         }
 
         Voltages getExcitationVoltages() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return Voltages();
+            }
+
             commPtr->write(generateCommandBuffer(EXMV, "?"));
-            while (commPtr->available() == 0) {
+
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -236,8 +329,14 @@ namespace SRI {
         }
 
         Sensitivities getSensorSensitivities() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return Sensitivities();
+            }
+
             commPtr->write(generateCommandBuffer(SENS, "?"));
-            while (commPtr->available() == 0) {
+
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -267,8 +366,14 @@ namespace SRI {
             }
             parameters = parameters.substr(0, parameters.find_last_of(';'));
 
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
+            }
+
             commPtr->write(generateCommandBuffer(SENS, parameters));
-            while (commPtr->available() == 0) {
+
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -282,8 +387,14 @@ namespace SRI {
         }
 
         Offsets getAmplifierZeroOffsets() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return Offsets();
+            }
+
             commPtr->write(generateCommandBuffer(AMPZ, "?"));
-            while (commPtr->available() == 0) {
+
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -292,7 +403,8 @@ namespace SRI {
 
             std::vector<std::string> resInString;
             try {
-                boost::split(resInString, response, boost::is_any_of(";"), boost::algorithm::token_compress_on);
+                boost::split(resInString, response, boost::is_any_of(";"),
+                             boost::algorithm::token_compress_on);
             }
             catch (boost::bad_lexical_cast &e) {
                 std::cout << "ERROR::FTSensor::getAmplifierZeroOffsets():" << e.what() << std::endl;
@@ -312,8 +424,14 @@ namespace SRI {
         }
 
         RTDataMode getRealTimeDataMode() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return RTDataMode();
+            }
+
             commPtr->write(generateCommandBuffer(SGDM, "?"));
-            while (commPtr->available() == 0) {
+
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -322,7 +440,8 @@ namespace SRI {
 
             std::vector<std::string> resInString;
             try {
-                boost::split(resInString, response, boost::is_any_of(";"), boost::algorithm::token_compress_on);
+                boost::split(resInString, response, boost::is_any_of(";"),
+                             boost::algorithm::token_compress_on);
             }
             catch (boost::bad_lexical_cast &e) {
                 std::cout << "ERROR::FTSensor::getRealTimeDataMode():" << e.what() << std::endl;
@@ -336,7 +455,8 @@ namespace SRI {
             //1. Get the relevant analog channels. format: (A01,A02,A03,A04,A05,A06)
             std::vector<std::string> channelsInString;
             boost::trim_if(resInString[0], boost::is_any_of("()"));
-            boost::split(channelsInString, resInString[0], boost::is_any_of("(),"), boost::algorithm::token_compress_on);
+            boost::split(channelsInString, resInString[0], boost::is_any_of("(),"),
+                         boost::algorithm::token_compress_on);
             rtDataMode.channelOrder.clear(); //rtDataMode has default value 1,2,3,4,5,6
             for (auto &cs : channelsInString) {
                 auto c = std::stoi(cs.substr(cs.find('A') + 1));
@@ -349,12 +469,14 @@ namespace SRI {
             //4. Filter model. Set to WMA. format: (WMA:1,1,2,3,4)
             std::vector<std::string> fmInString;
             boost::trim_if(resInString[3], boost::is_any_of("()"));
-            boost::split(fmInString, resInString[3], boost::is_any_of("():"), boost::algorithm::token_compress_on);
+            boost::split(fmInString, resInString[3], boost::is_any_of("():"),
+                         boost::algorithm::token_compress_on);
 
             rtDataMode.FM = fmInString[0];
             //5. WMA's relevant parameters, default 1.
             std::vector<std::string> weightsInString;
-            boost::split(weightsInString, fmInString[1], boost::is_any_of(","), boost::algorithm::token_compress_on);
+            boost::split(weightsInString, fmInString[1], boost::is_any_of(","),
+                         boost::algorithm::token_compress_on);
             rtDataMode.filterWeights.clear();
             for (auto &ws : weightsInString) {
                 auto w = std::stoi(ws);
@@ -388,8 +510,13 @@ namespace SRI {
             boost::trim_right_if(weights, boost::is_any_of(","));
             parameters += boost::str(boost::format("(%s:%s)") % rtDataMode.FM % weights);
 
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
+            }
+
             commPtr->write(generateCommandBuffer(SGDM, parameters));
-            while (commPtr->available() == 0) {
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -403,7 +530,13 @@ namespace SRI {
         }
 
         RTDataValid getRealTimeDataValid() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return RTDataValid();
+            }
+
             commPtr->write(generateCommandBuffer(DCKMD, "?"));
+
             while (commPtr->available() == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
@@ -415,8 +548,14 @@ namespace SRI {
         }
 
         bool setRealTimeDataValid(const RTDataValid &rtDataValid) {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return false;
+            }
+
             commPtr->write(generateCommandBuffer(DCKMD, rtDataValid));
-            while (commPtr->available() == 0) {
+
+            while (commPtr->available() == 0 && commPtr->isValid() == true) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
             std::vector<int8_t> recvbuf;
@@ -432,7 +571,13 @@ namespace SRI {
         template<typename T>
         std::vector<RTData<T>>
         getRealTimeDataOnce(const RTDataMode &rtMode = RTDataMode(), const RTDataValid &rtValid = "SUM") {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return std::vector<RTData<T>>();
+            }
+
             commPtr->write("AT+GOD\r\n");
+
             while (commPtr->available() == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
             }
@@ -495,12 +640,38 @@ namespace SRI {
             return rtData;
         };
 
-        void startRealTimeDataRepeatedly() { // this function need a callback function
+        /// // this function need a callback function
+        /// \tparam T The template parameters that defines the real time data format
+        /// \param rtDataHandler The callback function defined as: void rtDataHandler(std::vector<RTData<T>>&)
+        /// \param rtMode
+        /// \param rtValid
+        template<typename T>
+        void startRealTimeDataRepeatedly(boost::function<void(std::vector<RTData<T>>&)> rtDataHandler,
+                                         const RTDataMode &rtMode = RTDataMode(),
+                                         const RTDataValid &rtValid = "SUM") {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return;
+            }
 
+            commPtr->write("AT+GSD\r\n");
+
+            isRepeatedly = true;
+            boost::thread(&FTSensor::realTimeDataCyclingHandler<T>, this, rtDataHandler, rtMode, rtValid).detach();
+
+            std::cout << "Getting real time data repeatedly." << std::endl;
         }
 
         void stopRealTimeDataRepeatedly() {
+            if (!commPtr->isValid()) {
+                std::cout << "ERROR::Communication is not valid" << std::endl;
+                return;
+            }
 
+            commPtr->write("AT+GSD=STOP\r\n");
+
+            isRepeatedly = false;
+            std::cout << "Stop real time data repeatedly" << std::endl;
         }
 
     private:
@@ -523,7 +694,7 @@ namespace SRI {
         std::string extractResponseBuffer(std::vector<int8_t> &buf,
                                           const std::string &command,
                                           const std::string &parameter) {
-            std::string s((char*)buf.data(), buf.size());
+            std::string s((char *) buf.data(), buf.size());
 
             if (s.find(ACK) != 0)
                 return "";
@@ -534,8 +705,7 @@ namespace SRI {
             if (parameter == "?") {
                 nStart = s.find("=") + 1;
                 nEnd = s.find("$");
-            }
-            else {
+            } else {
                 nStart = s.find("$") + 1;
                 nEnd = s.find("\r\n");
             }
@@ -546,7 +716,7 @@ namespace SRI {
 
         uint8_t getChecksum(int8_t *pData, size_t len) {
             uint8_t sum = 0;
-            sum = std::accumulate(pData, pData+len, 0);
+            sum = std::accumulate(pData, pData + len, 0);
             return sum;
         }
 
@@ -555,6 +725,95 @@ namespace SRI {
             crc32.process_bytes(pData, len);
 
             return crc32.checksum();
+        }
+
+        template<typename T>
+        void realTimeDataCyclingHandler(boost::function<void(std::vector<RTData<T>>&)> rtDataHandler,
+                                        const RTDataMode &rtMode,
+                                        const RTDataValid &rtValid) {
+
+            while (isRepeatedly) {
+                if (!commPtr->isValid()) {
+                    std::cout << "ERROR::Communication is not valid" << std::endl;
+                    return;
+                }
+
+                while (commPtr->available() == 0) {
+                    std::this_thread::sleep_for(std::chrono::microseconds(DELAY_US));
+                }
+
+                std::vector<int8_t> recvbuf;
+                commPtr->read(recvbuf);
+
+                //parse the received buffer
+                uint32_t paritybit = 1;
+                if (rtValid == "SUM") {
+                    paritybit = 1;
+                } else if (rtValid == "CRC32") {
+                    paritybit = 4;
+                }
+
+                while(!recvbuf.empty()) {
+
+                    if (((uint8_t) recvbuf[0] != 0xAA) || ((uint8_t) recvbuf[1] != 0x55)) { // FRAME HEADER FAULT
+                        std::cout << "SRI::REAL-TIME-ERROR::Frame header is fault. " << std::endl;
+                        return;
+                    }
+
+                    uint32_t PackageLength = recvbuf[2] * 256 + recvbuf[3];
+
+                    if(PackageLength != recvbuf.size() - 4) {
+                        std::cout << "SRI::REAL-TIME-WARNING::Package Length not equal to received buf. Package Length is: "
+                                    << PackageLength + 4 << " .  buf size is: " << recvbuf.size() << std::endl;
+                    }
+
+                    if (PackageLength > recvbuf.size() - 4) {
+                        std::cout << "SRI::REAL-TIME-ERROR::Package Length is fault. " << std::endl;
+                        return;
+                    }
+
+                    uint32_t dataLen = PackageLength - paritybit - 2;
+                    if (dataLen != rtMode.channelOrder.size() * sizeof(T) * rtMode.PNpCH) {
+                        std::cout << "SRI::REAL-TIME-ERROR::Expected Data Length is fault. Maybe Data Mode need update "
+                                  << std::endl;
+                        return;
+                    }
+
+                    if (rtValid == "SUM") {
+                        if ((uint8_t) recvbuf[PackageLength + 3] != getChecksum(&(recvbuf[6]), dataLen)) {
+                            std::cout << "SRI::REAL-TIME-ERROR::Checksum is incorrect. " << std::endl;
+                            return;
+                        }
+                    } else if (rtValid == "CRC32") {
+                        uint32_t crc32 = getCRC32(&(recvbuf[6]), dataLen);
+                        int8_t *pCRC = &(recvbuf[recvbuf.size() - 4]);
+                        for (int i = 0; i < 4; i++) {
+                            if (pCRC[i] != ((int8_t *) &crc32)[i]) {
+                                std::cout << "SRI::REAL-TIME-ERROR::CRC32 is incorrect. " << std::endl;
+                                return;
+                            }
+                        }
+                    }
+
+                    std::vector<RTData<T>> rtData(rtMode.PNpCH);
+                    // i*nChannel*sizeof(T) + sizeof(T)*j
+                    size_t nChannel = rtMode.channelOrder.size();
+                    for (int i = 0; i < rtMode.PNpCH; i++) {
+                        for (int j = 0; j < nChannel; j++) {
+                            T val = *((T *) (&(recvbuf[6]) + i * nChannel * sizeof(T) + sizeof(T) * j));
+                            rtData[i][j] = val;
+                        }
+                    }
+
+                    rtDataHandler(rtData); // Callback function
+
+                    if(PackageLength != recvbuf.size() - 4) {
+                        std::vector<int8_t>(recvbuf.begin() + PackageLength + 4, recvbuf.end()).swap(recvbuf);
+                    }
+                    else
+                        break;
+                }
+            }
         }
 
 
