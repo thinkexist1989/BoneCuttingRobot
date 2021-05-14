@@ -20,6 +20,9 @@ extern "C" {
 
 extern char *EC_deviceName[2];
 
+/// Blocking for the next data comming
+/// \param index
+/// \return
 extern int torqueTimerE(int index);
 
 extern int initSHARE_DATA();
@@ -273,9 +276,16 @@ extern int ThreadWait(char *name);
 
 extern int grip_position(double pos);
 
+/// Get Data sizes (number of datatype)
+/// \param rdt robot data type (_robjoint, _robpose, _speed, _zone, _tool, _wobj)
+/// \return
 extern int getDataNum(robdatatype rdt);
 
-
+/// Get Data Name by no.
+/// \param rdt
+/// \param n
+/// \param dataname
+/// \return
 extern int getDataName(robdatatype rdt, int n, char *dataname);
 
 extern int robot_getDOF(int _index);

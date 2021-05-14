@@ -70,7 +70,7 @@ void torqueControl()
 	 double Torque_filter_out[3][3];
 
 	 unsigned char first_into_loop = 1; // 是否是第一次进入循环标志
-	 
+
 	 float  Force_d             = 0.0;
 	 float  Force_error         = 0.0;
 	 float  Position_delta      = 0.0;
@@ -91,7 +91,7 @@ void torqueControl()
 	 unsigned char flagInterpolation = 0;
 	 int      index_timer            = 0;
 	 double position_realtime[3];
-	 
+
 
 
 	 nbytes = sizeof(robjoint);
@@ -104,29 +104,29 @@ void torqueControl()
 	 for(dataId=0; dataId<numJoints; dataId++)
 	 {
 		name_rjoint[dataId] = (char*)malloc(LEN_NAME_POINT*sizeof(char));
-	 	getDataName(_robjoint,dataId,name_rjoint[dataId]);	
-	 	getrobjoint(name_rjoint[dataId],&rjoint[dataId]);
+	 	getDataName(_robjoint,dataId,name_rjoint[dataId]);
+	 	getrobjoint(name_rjoint[dataId],&rjoint[dataId]); //获取关节位置
 	 }
 
 
 
 	 nbytes = sizeof(robpose);
-	 numPoses = getDataNum(_robpose);
+	 numPoses = getDataNum(_robpose); //获取姿态数据个数用于分配内存（笛卡尔空间示教点，应该是robpose.POINT文件？）
 	 robpose *rpose;
 	 char **name_rpose;
 	 rpose = (robpose*)malloc(numPoses*nbytes);
-	 name_rpose = (char**)malloc(numPoses*sizeof(char*));
+	 name_rpose = (char**)malloc(numPoses*sizeof(char*)); //分配字符串数组指针空间
 
 	 for(dataId=0; dataId<numPoses; dataId++)
 	 {
-		name_rpose[dataId] = (char*)malloc(LEN_NAME_POINT*sizeof(char));
+		name_rpose[dataId] = (char*)malloc(LEN_NAME_POINT*5(char)); //分配数组每个字符串空间
 	 	getDataName(_robpose,dataId,name_rpose[dataId]);
-	 	getrobpose(name_rpose[dataId],&rpose[dataId]);
+	 	getrobpose(name_rpose[dataId],&rpose[dataId]); //获取机器人姿态
 	 }
 
 
 	 nbytes = sizeof(speed);
-	 numSpeeds = getDataNum(_speed);
+	 numSpeeds = getDataNum(_speed); //获取速度数据个数用于分配内存
 	 speed *rspeed ;
 	 char **name_rspeed;
 	 rspeed = (speed*)malloc(numSpeeds*nbytes);
@@ -145,14 +145,14 @@ void torqueControl()
 	 double **roffsetpose;
 	 int *roffsetpose_forceflag;
 	 int offsetPosesNum = 0;
-	 
+
 	 roffsetpose_forceflag = (int*)malloc(numOffsetPoses*sizeof(int));
 	 roffsetpose = (double**)malloc(numOffsetPoses*sizeof(double*));
 	 for(dataId =0; dataId<numOffsetPoses; dataId++)
 	 {
-		roffsetpose[dataId] = (double*)malloc(2*sizeof(double)); 
+		roffsetpose[dataId] = (double*)malloc(2*sizeof(double));
 	 }
-	 if(ReadOffset_XY_Fromfile(roffsetpose, roffsetpose_forceflag, &offsetPosesNum,OFFSETPOSE_INIFILE)!=0)
+	 if(ReadOffset_XY_Fromfile(roffsetpose, roffsetpose_forceflag, &offsetPosesNum,OFFSETPOSE_INIFILE)!=0) //把offsetpose.POINT中的点读取回来
 	 {
 		 return;
 	 }
@@ -163,7 +163,7 @@ void torqueControl()
 		 printf("read offsetPose Error Code: [%d,%d]!\r\n",numOffsetPoses,offsetPosesNum );
 		 return ;
 	 }
-	 
+
 		printf(" ****************************************\r\n");
 		printf("\033[1;32m --->【roboffset type has %d points】 \r\n \033[0m", offsetPosesNum);
 
@@ -175,7 +175,7 @@ void torqueControl()
 
 	for(dataId=0; dataId<numJoints; dataId++)
 	{
-		if(strcmp(name_rjoint[dataId],"j0") == 0)
+		if(strcmp(name_rjoint[dataId],"j0") == 0) //寻找名为j0的关节空间位置，找到了就把id赋值给inquery_joint_id，之后退出循环
 		{
 			inquery_joint_id = dataId;
 			break;
@@ -184,11 +184,11 @@ void torqueControl()
 
 	for(dataId=0; dataId<numPoses; dataId++)
 	{
-		if(strcmp(name_rpose[dataId],"p0") == 0)
+		if(strcmp(name_rpose[dataId],"p0") == 0) //robpose.POINT中寻找名为p0的笛卡尔空间位置
 		{
 			inquery_pose_id = dataId;
 		}
-		else if(strcmp(name_rpose[dataId],"p201005") == 0)
+		else if(strcmp(name_rpose[dataId],"p201005") == 0) //寻找名为p201005的笛卡尔空间位置
 		{
 			inquery_pose_p1005 = dataId;
 		}
@@ -207,11 +207,11 @@ void torqueControl()
 
 	for(dataId=0; dataId<numSpeeds; dataId++)
 	{
-		if(strcmp(name_rspeed[dataId],"v0") == 0)
+		if(strcmp(name_rspeed[dataId],"v0") == 0) // robspeed中寻找v0的速度约束
 		{
 			inquery_speed_id = dataId;
 		}
-		else if(strcmp(name_rspeed[dataId],"v3012") == 0)
+		else if(strcmp(name_rspeed[dataId],"v3012") == 0) // robspeed中寻找v3012的速度约束
 		{
 			inquery_speed_v3012 = dataId;
 		}
@@ -223,40 +223,39 @@ void torqueControl()
 	}
 
 
- 	printf("\033[1;32m --->【***********************Query Results***********************】\r\n \033[0m");	
+ 	printf("\033[1;32m --->【***********************Query Results***********************】\r\n \033[0m");
 	if(inquery_joint_id!=65535 && inquery_pose_id!=65535 && inquery_speed_id!=65535&&inquery_speed_v3012!=65535)
 		printf("\033[1;32m ---speed:%s, joint:%s, pose:%s. speed-V3012:%s ----\r\n \033[0m",name_rspeed[inquery_speed_id],name_rjoint[inquery_joint_id],name_rpose[inquery_pose_id], name_rspeed[inquery_speed_v3012]);
 
 
-	
+
 
 	signed char act_mode[10]={_mode,_mode,_mode,_mode,_mode,_mode,_mode,_mode,_mode,_mode};
 	robot_setmode_c(robot_name,act_mode);
-	dt=get_BusyTs_s_c(getEC_deviceName(0,NULL));
+	dt=get_BusyTs_s_c(getEC_deviceName(0,NULL)); //获取总线读取间隔？？
 
 
-	robot_power_c(robot_name);
+    //先使能再下电，英立说要不这样做，会有bug
+	robot_power_c(robot_name); //使能
+ 	robot_poweroff_c(robot_name); //下电
 
- 	robot_poweroff_c(robot_name);
 
-
-
-	index_movel = 1;
+	index_movel = 1; //没使用过
 	while (1)
 	{
-		torqueTimerE(0);
+		torqueTimerE(0); //阻塞等待总线数据到来
 
-		if ((1==msg_key.power)&&(1==msg_key.start))
+		if ((1==msg_key.power)&&(1==msg_key.start)) //必须同时输入power和start才开始执行
 		{
 
-			if(Finished_Force_depth&&step_movel_num<numOffsetPoses)
+			if(Finished_Force_depth&&step_movel_num<numOffsetPoses) //条件：力控结束但后续还有点需要走
 			{
-				
+
 				while(step_movel_num<numOffsetPoses && roffsetpose_forceflag[step_movel_num]==0)
 				{
 					rpose_After_Offs = Offs(&rpose[inquery_pose_p1005],roffsetpose[step_movel_num][0],roffsetpose[step_movel_num][1],0,0,0,0);
 					step_movel_num++;
-					moveL(&rpose_After_Offs, &rspeed[inquery_speed_v3012],NULL,NULL,NULL);
+					moveL(&rpose_After_Offs, &rspeed[inquery_speed_v3012],NULL,NULL,NULL); // moveL直线运动
 				}
 
 				if(step_movel_num>=numOffsetPoses)
@@ -276,8 +275,8 @@ void torqueControl()
 
 		robot_getposition_angle(robot_name, position_realtime);
 		Position_now = position_realtime[0];
-		
-		if ((1==msg_key.power)&&(1==msg_key.start))
+
+		if ((1==msg_key.power)&&(1==msg_key.start)) //必须同时输入power和start才开始执行
 		{
 			if(flagInterpolation ==1)
 			{
@@ -293,6 +292,7 @@ void torqueControl()
 				axis_setposition_angle(robot_name,Position_ref_pf,1);
 			}
 		}
+
 		if(index_timer < CONTROL_PEROID_T)
 		{
 			index_timer++;
@@ -302,7 +302,7 @@ void torqueControl()
 		{
 			index_timer = 0;
 		}
-		
+
 
 		if(init_finish_flag)
 		{
@@ -317,7 +317,7 @@ void torqueControl()
 				Torque_filter_in [0][0] = get_X_sensor1;
 				Torque_filter_in [0][1] = get_X_sensor1;
 				Torque_filter_in [0][2] = get_X_sensor1;
-				
+
 				Torque_filter_out[0][0] = get_X_sensor1;
 				Torque_filter_out[0][1] = get_X_sensor1;
 				Torque_filter_out[0][2] = get_X_sensor1;
@@ -336,7 +336,7 @@ void torqueControl()
 	    	get_X_sensor1_dot = (get_X_sensor1_afterFilter - get_X_sensor1_afterFilter_last) / dt;
 			get_X_sensor1_afterFilter_last = get_X_sensor1_afterFilter;
 
-				
+
 
 
 
@@ -354,12 +354,12 @@ void torqueControl()
 				Force_d = -3.0;
 				Force_error = Force_d - get_X_sensor1_afterFilter;
 
-				Position_delta    = Force_error / Admit_K;		
+				Position_delta    = Force_error / Admit_K;
 
 
 				if(step_movel_num<1)
 				{
-					printf("Error in Force Control in offset pose index"); 
+					printf("Error in Force Control in offset pose index");
 					return;
 				}
 
@@ -388,10 +388,10 @@ void torqueControl()
 				Position_delta_last = Position_delta;
 
 				Position_ref_pf   = Position_d - Position_delta;
-				
+
 				flagInterpolation = 1;
 
-				printf("\033[1;32m --->force_now:%f; force_delta:%f; pos_now: %f; pos_delta:%f; posref:%f \r\n \033[0m", 
+				printf("\033[1;32m --->force_now:%f; force_delta:%f; pos_now: %f; pos_delta:%f; posref:%f \r\n \033[0m",
 						 get_X_sensor1_afterFilter,Force_error, Position_now, Position_delta, Position_ref_pf);
 
 					if(axis_getstatus_c(robot_name ,1) != 4663)
@@ -406,8 +406,8 @@ void torqueControl()
 
 
 		}
-		
-//////////////////////////////////////////////////////////////////////////////////////////			
+
+//////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -442,7 +442,7 @@ void torqueControl()
 	 free(roffsetpose_forceflag);
 
 	 printf("All is OK!");
-	 
+
 }
 
 

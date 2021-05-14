@@ -248,7 +248,7 @@ extern int get_EC_deviceHandeNum_c(char *ecName);
 /// \return cycle in ns
 extern int get_BusyTs_c(char *ecName);
 
-///
+/// Get EtherCAT bus interval (1ms default?)
 /// \param ecName
 /// \return
 extern double get_BusyTs_s_c(char *ecName);
