@@ -119,7 +119,7 @@ void torqueControl()
 
 	 for(dataId=0; dataId<numPoses; dataId++)
 	 {
-		name_rpose[dataId] = (char*)malloc(LEN_NAME_POINT*5(char)); //分配数组每个字符串空间
+         name_rpose[dataId] = (char*)malloc(LEN_NAME_POINT*sizeof(char)); //分配数组每个字符串空间
 	 	getDataName(_robpose,dataId,name_rpose[dataId]);
 	 	getrobpose(name_rpose[dataId],&rpose[dataId]); //获取机器人姿态
 	 }
