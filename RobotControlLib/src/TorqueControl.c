@@ -146,8 +146,8 @@ void torqueControl()
 	 int *roffsetpose_forceflag;
 	 int offsetPosesNum = 0;
 
-	 roffsetpose_forceflag = (int*)malloc(numOffsetPoses*sizeof(int));
-	 roffsetpose = (double**)malloc(numOffsetPoses*sizeof(double*));
+	 roffsetpose_forceflag = (int*)malloc(numOffsetPoses*sizeof(int)); // 每一个robpose对应的forceflag
+	 roffsetpose = (double**)malloc(numOffsetPoses*sizeof(double*));   // 每一个robpose对应位置
 	 for(dataId =0; dataId<numOffsetPoses; dataId++)
 	 {
 		roffsetpose[dataId] = (double*)malloc(2*sizeof(double));
@@ -241,7 +241,7 @@ void torqueControl()
 
 
 	index_movel = 1; //没使用过
-	while (1)
+	while (1) //进入主循环
 	{
 		torqueTimerE(0); //阻塞等待总线数据到来
 
@@ -251,20 +251,20 @@ void torqueControl()
 			if(Finished_Force_depth&&step_movel_num<numOffsetPoses) //条件：力控结束但后续还有点需要走
 			{
 
-				while(step_movel_num<numOffsetPoses && roffsetpose_forceflag[step_movel_num]==0)
+				while(step_movel_num<numOffsetPoses && roffsetpose_forceflag[step_movel_num]==0) //如果还有点要走并且无力控，则一直走到指定位置
 				{
 					rpose_After_Offs = Offs(&rpose[inquery_pose_p1005],roffsetpose[step_movel_num][0],roffsetpose[step_movel_num][1],0,0,0,0);
 					step_movel_num++;
 					moveL(&rpose_After_Offs, &rspeed[inquery_speed_v3012],NULL,NULL,NULL); // moveL直线运动
 				}
 
-				if(step_movel_num>=numOffsetPoses)
+				if(step_movel_num>=numOffsetPoses) //如果已经完所有点，power和start置0
 				{
 					msg_key.power = 0;
 					msg_key.start = 0;
 				}
 
-
+                //由于第一刀向下走，肯定是带力控的，因此启动后点没走完且为力控模式，则肯定是第一次进入循环
 				msg_key.firststart = 1;
 				first_into_loop = 1;
 				flagInterpolation = 0;
@@ -273,8 +273,8 @@ void torqueControl()
 
 		}
 
-		robot_getposition_angle(robot_name, position_realtime);
-		Position_now = position_realtime[0];
+		robot_getposition_angle(robot_name, position_realtime); //获取机器人当前位置（3个关节）
+		Position_now = position_realtime[0]; //Position_now存储的是第一个关节的位置
 
 		if ((1==msg_key.power)&&(1==msg_key.start)) //必须同时输入power和start才开始执行
 		{
@@ -293,7 +293,7 @@ void torqueControl()
 			}
 		}
 
-		if(index_timer < CONTROL_PEROID_T)
+		if(index_timer < CONTROL_PEROID_T) //
 		{
 			index_timer++;
 			continue;
@@ -304,7 +304,7 @@ void torqueControl()
 		}
 
 
-		if(init_finish_flag)
+		if(init_finish_flag) //这个标志位在shareData.h中声明，应该是力传感器初始化是否成功的标志位
 		{
 			pthread_mutex_lock(&mutex_torquesensor1);
 			get_X_sensor1 =	force_X_sensor1;
@@ -312,7 +312,7 @@ void torqueControl()
 			get_Z_sensor1 =	force_Z_sensor1;
 			pthread_mutex_unlock(&mutex_torquesensor1);
 
-			if(first_into_loop)
+			if(first_into_loop) //如果是第一次进循环，就把传感器的值赋给滤波器作为初值
 			{
 				Torque_filter_in [0][0] = get_X_sensor1;
 				Torque_filter_in [0][1] = get_X_sensor1;
@@ -330,21 +330,19 @@ void torqueControl()
 				Torque_filter_in[0][0] = get_X_sensor1;
 			}
 
+			//2阶低通滤波
 		 	LowPass_order2( FILTER_FREQ,  FILTER_DAMP,  FILTER_PEROID,  Torque_filter_out[0],  Torque_filter_in[0]);
-			get_X_sensor1_afterFilter = Torque_filter_out[0][0];
+			get_X_sensor1_afterFilter = Torque_filter_out[0][0]; //获取滤波之后的力
 
-	    	get_X_sensor1_dot = (get_X_sensor1_afterFilter - get_X_sensor1_afterFilter_last) / dt;
-			get_X_sensor1_afterFilter_last = get_X_sensor1_afterFilter;
-
-
+	    	get_X_sensor1_dot = (get_X_sensor1_afterFilter - get_X_sensor1_afterFilter_last) / dt; // 力变化率
+			get_X_sensor1_afterFilter_last = get_X_sensor1_afterFilter; // 保存上一次的力
 
 
-
-			if ((1==msg_key.power)&&(1==msg_key.start))
+			if ((1==msg_key.power)&&(1==msg_key.start)) //必须同时输入power和start才开始执行
 			{
-				if(msg_key.firststart == 1)
+				if(msg_key.firststart == 1) // 是首次启动的意思？
 				{
-					Position_d = position_realtime[0];
+					Position_d = position_realtime[0]; //初次启动，期望位置赋值为当前位置
 					Position_d_first = Position_d;
 					msg_key.firststart = 0;
 				}

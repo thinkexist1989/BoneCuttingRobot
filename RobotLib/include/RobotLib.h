@@ -163,7 +163,15 @@ extern void SetAo(int id, double flag);
 
 extern void GetAi(int id, double *flag);
 
-
+///
+/// \param rpose
+/// \param x
+/// \param y
+/// \param z
+/// \param k
+/// \param p
+/// \param s
+/// \return
 extern robpose Offs(const robpose *rpose, double x, double y, double z, double k, double p, double s);
 
 

@@ -69,12 +69,12 @@ extern double getai_physics(char *ecHName, int id_index);
 /// \param id_index
 extern void setao_physics(char *ecHName, double ao, int id_index);
 
-/// Get robot or addition axis angle
+/// Get robot or addition axis angle (joint space)
 /// \param ecHName subset name
 /// \param[out] angle return angles(rad)
 extern void robot_getposition_angle(char *ecHName, double *angle);
 
-/// Get robot or addition axis tartet angle
+/// Get robot or addition axis target angle
 /// \param ecHName subset name
 /// \param[out] angle return target angles(rad)
 extern void robot_getposition_angle_target(char *ecHName, double *angle);
