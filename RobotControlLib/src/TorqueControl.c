@@ -93,7 +93,7 @@ void torqueControl() {
 
 
     nbytes = sizeof(robjoint);
-    numJoints = getDataNum(_robjoint);
+    numJoints = getDataNum(_robjoint); //去读取/hanbing/data/robjoint.POINT中存储的点
     robjoint *rjoint;
     char **name_rjoint;
     rjoint = (robjoint *) malloc(numJoints * nbytes);
@@ -107,7 +107,7 @@ void torqueControl() {
 
 
     nbytes = sizeof(robpose);
-    numPoses = getDataNum(_robpose); //获取姿态数据个数用于分配内存（笛卡尔空间示教点，应该是robpose.POINT文件？）
+    numPoses = getDataNum(_robpose); //获取姿态数据个数用于分配内存（笛卡尔空间示教点，/hanbing/data/robpose.POINT中存储的点）
     robpose *rpose;
     char **name_rpose;
     rpose = (robpose *) malloc(numPoses * nbytes);
@@ -229,6 +229,7 @@ void torqueControl() {
     {
         torqueTimerE(0); //阻塞等待总线数据到来
 
+        /***** 力控步进循环处理以及无力控退刀处理 *****/
         if ((1 == msg_key.power) && (1 == msg_key.start)) //必须同时输入power和start才开始执行
         {
 
@@ -250,7 +251,7 @@ void torqueControl() {
                     msg_key.start = 0;
                 }
 
-                //由于第一刀向下走，肯定是带力控的，因此启动后点没走完且为力控模式，则肯定是第一次进入循环
+                //力控步进更新。每一个offset力控一次，点没走完且为力控模式
                 msg_key.firststart = 1;
                 first_into_loop = 1;
                 flagInterpolation = 0;
@@ -259,10 +260,11 @@ void torqueControl() {
 
         }
 
+        /***** 每次循环获取机器人关节位置 *****/
         robot_getposition_angle(robot_name, position_realtime); //获取机器人当前位置（3个关节）
         Position_now = position_realtime[0]; //Position_now存储的是第一个关节的位置
 
-        //插补代码，如果每次循环位移不能超过POSITION_DELTA_THRESHOLD
+        /***** 插补代码，如果每次循环位移不能超过POSITION_DELTA_THRESHOLD *****/
         if ((1 == msg_key.power) && (1 == msg_key.start)) //必须同时输入power和start才开始执行
         {
             if (flagInterpolation == 1) { //插补标志位 363L 和 372L
@@ -276,6 +278,7 @@ void torqueControl() {
             }
         }
 
+        /***** UNUSED *****/
         if (index_timer < CONTROL_PEROID_T) //
         {
             index_timer++;
@@ -284,7 +287,7 @@ void torqueControl() {
             index_timer = 0;
         }
 
-
+        /***** 力控部分代码，在力传感器初始化完毕之后开始处理 *****/
         if (init_finish_flag) //这个标志位在shareData.h中声明，应该是力传感器初始化是否成功的标志位
         {
             pthread_mutex_lock(&mutex_torquesensor1);
@@ -293,6 +296,7 @@ void torqueControl() {
             get_Z_sensor1 = force_Z_sensor1;
             pthread_mutex_unlock(&mutex_torquesensor1);
 
+            /**** 力控：力传感器数据的处理 ****/
             if (first_into_loop) //如果是第一次进循环，就把传感器的值赋给滤波器作为初值
             {
                 Torque_filter_in[0][0] = get_X_sensor1;
@@ -317,17 +321,20 @@ void torqueControl() {
             get_X_sensor1_afterFilter_last = get_X_sensor1_afterFilter; // 保存上一次的力
 
 
+            /**** 力控：获取滤波后力传感器数据值 ****/
             if ((1 == msg_key.power) && (1 == msg_key.start)) //必须同时输入power和start才开始执行
             {
-                if (msg_key.firststart == 1) // 是首次启动的意思？
+                if (msg_key.firststart == 1) // 是首次输入start（前面会重新赋值）
                 {
                     Position_d = position_realtime[0]; //初次启动，期望位置赋值为当前位置
                     Position_d_first = Position_d;
                     msg_key.firststart = 0;
                 }
 
+
                 Position_error = Position_d - Position_now; //期望位置与实际位置误差
 
+                /***** 力控：导纳控制计算 *****/
                 Force_d = -3.0; //期望力，X向下为正，因此期望的切骨力为负. -3N
                 Force_error = Force_d - get_X_sensor1_afterFilter;
 
@@ -341,10 +348,11 @@ void torqueControl() {
 
 
                 if (Position_now - Position_d_first <
-                    roffsetpose[step_movel_num][1] - roffsetpose[step_movel_num - 1][1]) { //第一次运行如果距离太小就增加距离？
+                    roffsetpose[step_movel_num][1] - roffsetpose[step_movel_num - 1][1]) { //每一次力控的距离是否已经超过offset量
 
+                    //当期望位置和实际位置误差<2.0,则给position_d一个0.06增量，为何？
                     if (Position_error < 2.0)
-                        Position_d += INC_POSITION_PER; //期望位置增加0.06的增量
+                        Position_d += INC_POSITION_PER; //期望位置增加0.06的增量（单位mm?）
 
                 } else {
                     Finished_Force_depth = 1; //单次力控已经走完
@@ -368,7 +376,7 @@ void torqueControl() {
                 if (axis_getstatus_c(robot_name, 1) != 4663) {
                     msg_key.power = 0;
                 }
-            } else {
+            } else { //
                 flagInterpolation = 0;
             }
 
