@@ -15,6 +15,7 @@
 
 #include "sri/ftsensor.hpp"
 #include "sri/commethernet.hpp"
+#include "BoneCuttingRobot.hpp"
 
 void rtDataHandler(std::vector<SRI::RTData<float>>& rtData) {
     static int i = 0;

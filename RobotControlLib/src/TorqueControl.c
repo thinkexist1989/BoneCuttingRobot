@@ -317,7 +317,7 @@ void torqueControl() {
             LowPass_order2(FILTER_FREQ, FILTER_DAMP, FILTER_PEROID, Torque_filter_out[0], Torque_filter_in[0]);
             get_X_sensor1_afterFilter = Torque_filter_out[0][0]; //获取滤波之后的力
 
-            get_X_sensor1_dot = (get_X_sensor1_afterFilter - get_X_sensor1_afterFilter_last) / dt; // 力变化率
+            get_X_sensor1_dot = (get_X_sensor1_afterFilter - get_X_sensor1_afterFilter_last) / dt; // 力变化率，但未使用过
             get_X_sensor1_afterFilter_last = get_X_sensor1_afterFilter; // 保存上一次的力
 
 
