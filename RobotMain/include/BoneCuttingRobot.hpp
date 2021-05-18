@@ -136,6 +136,21 @@ public:
         robot_poweroff_c(_robotName);
     }
 
+    void setAxisPosition(int axisId, double position) {
+        if (_robotName == nullptr) {
+            std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
+            return;
+        }
+
+        axis_setposition_angle(_robotName, position, axisId);
+    }
+
+    void setRobotPosition(std::vector<double>& angle) {
+
+    }
+
+
+
     void getJointSpacePoints(std::string fileName) {
         _jointSpacePoints.clear();
 
@@ -233,6 +248,9 @@ private:
     std::map<std::string, speed> _speedLimits; //笛卡尔空间速度 /hanbing/data/speed.POINT
 
     std::queue<offsetpose> _cuttingOffsets; //切骨路径规划点，相对于当前位置（先移动到j点）的偏移
+
+    std::vector<double> axisPositions;
+
 
     boost::format _f; //设置前景色
     boost::format _fb; //前景背景都设置
