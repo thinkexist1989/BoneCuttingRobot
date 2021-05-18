@@ -31,9 +31,14 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
+#include <boost/format.hpp>
 
 #include "RobotInterface.h"
 //#include "kinematicInterface.h"
+
+//sri FT sensor
+#include "sri/ftsensor.hpp"
+#include "sri/commethernet.hpp"
 
 struct offsetpose {
     double x; // x方向偏移
@@ -42,48 +47,44 @@ struct offsetpose {
     bool f; // 是否有力控
 };
 
-enum ForegroundColor {
-    FG_BLACK = 30,
-    FG_RED = 31,
-    FG_GREEN = 32,
-    FG_YELLOW = 33,
-    FG_BLUE = 34,
-    FG_MAGENTA = 35,
-    FG_CYAN = 36,
-    FG_WHITE = 37,
-    FG_DEFAULT = 39,
+enum Color {
+    BLACK = 0,
+    RED = 1,
+    GREEN = 2,
+    YELLOW = 3,
+    BLUE = 4,
+    MAGENTA = 5,
+    CYAN = 6,
+    WHITE = 7,
+    DEFAULT = 9
 };
+//
+//class TermColor {
+//    std::string _str;
+//    static boost::format f; //设置前景色
+//    static boost::format fb; //前景背景都设置
+//    static boost::format def; //恢复默认
+//public:
+//    TermColor() : f("\033[1;3%1%m "),
+//                  fb("\033[1;4%2%;3%1%m "),
+//                  def("\033[0m") {
+//
+//    }
+//
+//    friend std::ostream &
+//    operator<<(std::ostream &os, const TermColor &tc) {
+//        return os << "\033[0m";
+//    }
+//};
 
-enum BackgroundColor {
-    BG_BLACK = 40,
-    BG_RED = 41,
-    BG_GREEN = 42,
-    BG_YELLOW = 43,
-    BG_BLUE = 44,
-    BG_MAGENTA = 45,
-    BG_CYAN = 46,
-    BG_WHITE = 47,
-    BG_DEFAULT = 49
-};
-
-class TermColor {
-    ForegroundColor _fg;
-    BackgroundColor _bg;
-public:
-    TermColor(ForegroundColor fg, BackgroundColor bg) : _fg(fg), _bg(bg) {}
-
-    friend std::ostream &
-    operator<<(std::ostream &os, const TermColor &tc) {
-        return os << "\033[1;" << tc._fg << ";" << tc._bg << "m";
-    }
-};
-
-}
 
 class BoneCuttingRobot {
 
 public:
-    BoneCuttingRobot() : _modes(10, 8) {
+    BoneCuttingRobot() : _modes(10, 8),
+                         _f("\033[1;3%1%m "),
+                         _fb("\033[1;4%2%;3%1%m "),
+                         _def("\033[0m ") {
         init(); //初始化
     }
 
@@ -94,14 +95,14 @@ public:
     void init() {
         _robotName = get_name_robotEC_deviceHandle_c(getEC_deviceName(0, NULL), 0);
         if (_robotName == nullptr) {
-            std::cout << "Robot is not initialized" << std::endl;
+            std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
             return;
         }
 
         robot_setmode_c(_robotName, &_modes[0]); //设置运行模式
 
         _interval = get_BusyTs_s_c(getEC_deviceName(0, NULL)); //获取总线读取间隔 单位是秒？
-        std::cout << "EtherCAT bus interval is: " << _interval << std::endl;
+        std::cout << _f % Color::GREEN << " ====> EtherCAT bus interval is: " << _interval << _def << std::endl;
 
 
         /***** 读取各种所需数据 *****/
@@ -119,7 +120,7 @@ public:
 
     void robotPowerOn() {
         if (_robotName == nullptr) {
-            std::cout << "Robot is not initialized" << std::endl;
+            std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
             return;
         }
 
@@ -128,7 +129,7 @@ public:
 
     void robotPowerOff() {
         if (_robotName == nullptr) {
-            std::cout << "Robot is not initialized" << std::endl;
+            std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
             return;
         }
 
@@ -217,6 +218,8 @@ public:
             op.f = section.second.get<bool>("f");
 
             _cuttingOffsets.push(op);
+
+
         }
     }
 
@@ -230,6 +233,10 @@ private:
     std::map<std::string, speed> _speedLimits; //笛卡尔空间速度 /hanbing/data/speed.POINT
 
     std::queue<offsetpose> _cuttingOffsets; //切骨路径规划点，相对于当前位置（先移动到j点）的偏移
+
+    boost::format _f; //设置前景色
+    boost::format _fb; //前景背景都设置
+    boost::format _def; //恢复默认
 
 };
 
