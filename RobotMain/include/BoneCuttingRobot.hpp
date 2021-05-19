@@ -33,6 +33,7 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/format.hpp>
+#include <boost/timer/timer.hpp>
 
 #include "RobotInterface.h"
 //#include "kinematicInterface.h"
@@ -97,8 +98,10 @@ class BoneCuttingRobot {
 public:
     BoneCuttingRobot() : _modes(10, 8),
                          _f("\033[1;3%1%m "),
-                         _fb("\033[1;4%2%;3%1%m "),
-                         _def("\033[1;39m "),
+                         _b("\033[1;4%1%m "),
+                         _fb("\033[1;3%1%;4%2%m "),
+                         _def("\033[0m "),
+                         _fmt(" [%ts] "),
                          _axisPositions(3, 0){
         init(); //初始化
     }
@@ -108,14 +111,13 @@ public:
     }
 
     void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
-        std::cout << _fb % Color::WHITE % Color::GREEN << "SRI::FTSensor" << _def << "Data Comming...." << std::endl;
         static int i = 0;
-        std::cout << _fb % Color::WHITE % Color::GREEN << _def << "[" << i << "] RT Data is ->  ";
+        std::cout << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << i << "] RT Data is ->  ";
         for(int i = 0; i < rtData.size(); i++) {
             for(int j = 0; j < 6; j++) {
                 std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
             }
-            std::cout << std::endl;
+            std::cout << _def << std::endl;
         }
         i++;
     }
@@ -130,7 +132,7 @@ public:
         robot_setmode_c(_robotName, &_modes[0]); //设置运行模式
 
         _interval = get_BusyTs_s_c(getEC_deviceName(0, NULL)); //获取总线读取间隔 单位是秒？
-        std::cout << _f % Color::GREEN << "====> EtherCAT bus interval is: " << _interval << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "EtherCAT bus interval is: " << _interval << _def << std::endl;
 
         /***** 读取各种所需数据 *****/
         getJointSpacePoints("/hanbing/data/robjoint.POINT"); //读取关节示教点
@@ -142,10 +144,14 @@ public:
         getCuttingOffsets("/hanbing/data/offsetpose.POINT"); //读取切骨偏移量
 
         /***** 初始化六维力传感器 *****/
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor is initializing ...." <<_def << std::flush;
+
         _cePtr = std::make_shared<SRI::CommEthernet>(FTSENSOR_IP, 4008);
         _ftPtr = std::make_shared<SRI::FTSensor>(_cePtr.get());
 
-        std::cout << _fb % Color::WHITE % Color::GREEN << "SRI::FTSensor" << _def << "===> IP Address: " << _ftPtr->getIpAddress() << std::endl;
+        std::cout << " finished" << std::endl;
+
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor IP Address: " << _ftPtr->getIpAddress() << _def << std::endl;
 
         auto rtMode = _ftPtr->getRealTimeDataMode();
         auto rtDataValid = _ftPtr->getRealTimeDataValid();
@@ -205,7 +211,6 @@ public:
 
 
     void getJointSpacePoints(std::string fileName) {
-        std::cout << "getJointSpacePoints" << std::endl;
         _jointSpacePoints.clear();
 
         boost::property_tree::ptree pt;
@@ -232,7 +237,7 @@ public:
             _jointSpacePoints[section.first] = rj;
         }
 
-        std::cout << _f % Color::GREEN << "===> Loaded Joint Space Teach Points : " << _jointSpacePoints.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Joint Space Teach Points : " << _jointSpacePoints.size() << _def << std::endl;
     }
 
     void getCartesianSpacePoints(std::string fileName) {
@@ -254,7 +259,7 @@ public:
             _cartesianSpacePoints[section.first] = rp;
         }
 
-        std::cout << _f % Color::GREEN << "===> Loaded Cartesian Space Teach Points : " << _cartesianSpacePoints.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cartesian Space Teach Points : " << _cartesianSpacePoints.size() << _def << std::endl;
     }
 
     void getSpeedLimits(std::string fileName) {
@@ -305,7 +310,7 @@ public:
             _speedLimits[section.first] = sp;
         }
 
-        std::cout << _f % Color::GREEN << "===> Loaded Speed Limits : " << _speedLimits.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) <<  "Loaded Speed Limits : " << _speedLimits.size() << _def << std::endl;
     }
 
     void getCuttingOffsets(std::string fileName) {
@@ -327,7 +332,7 @@ public:
             _cuttingOffsets.push(op);
         }
 
-        std::cout << _f % Color::GREEN << "===> Loaded Cutting Offset Points : " << _cuttingOffsets.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN  << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cutting Offset Points : " << _cuttingOffsets.size() << _def << std::endl;
     }
 
 private:
@@ -345,8 +350,12 @@ private:
 
 
     boost::format _f; //设置前景色
+    boost::format _b; //设置背景色
     boost::format _fb; //前景背景都设置
     boost::format _def; //恢复默认
+
+    const std::string _fmt; //显示时间戳格式
+    boost::timer::cpu_timer _timer;
 
     std::shared_ptr<SRI::CommEthernet> _cePtr; //六维力传感器通信
     std::shared_ptr<SRI::FTSensor> _ftPtr; //六维力传感器指针

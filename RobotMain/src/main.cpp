@@ -7,6 +7,7 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
+#include <csignal>
 
 #include "functionTest.h"
 //#include"RobotControl.h"
@@ -17,6 +18,16 @@
 #include "sri/commethernet.hpp"
 #include "BoneCuttingRobot.hpp"
 
+bool isRuning = true;
+
+void signalHandler(int signo) {
+    if(signo == SIGINT) {
+        std::cout << "\033[1;31m" << "[!!SIGNAL!!]" << "INTERRUPT by CTRL-C" << "\033[0m" << std::endl;
+        isRuning = false;
+        exit(0);
+    }
+
+}
 
 int main(int argc, char *argv[]) {
     int err = 0;
@@ -30,6 +41,11 @@ int main(int argc, char *argv[]) {
     if (0 != err) {
         return err;
     }
+
+    if(signal(SIGINT, signalHandler) == SIG_ERR) {
+        std::cout << "\033[1;31m" << "Can not catch SIGINT" << "\033[0m" << std::endl;
+    }
+
 
 //    pthread_mutex_init(&mutex_torquesensor1, NULL);
 //
@@ -50,7 +66,7 @@ int main(int argc, char *argv[]) {
     BCR bcr;
 
     //------------------------wait----------------------------------
-    while (1) {
+    while (isRuning) {
         sleep(1);
     }
     return EXIT_SUCCESS;
