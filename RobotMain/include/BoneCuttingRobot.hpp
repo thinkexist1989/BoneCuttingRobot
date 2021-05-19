@@ -46,6 +46,14 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 #define FTSENSOR_IP "192.168.1.108"
 
+constexpr size_t HASH_STRING_PIECE(const char *string_piece,size_t hashNum=0){
+    return *string_piece?HASH_STRING_PIECE(string_piece+1,(hashNum*131)+*string_piece):hashNum;
+}
+
+constexpr size_t operator "" _HASH(const char *string_pice,size_t){
+    return HASH_STRING_PIECE(string_pice);
+}
+
 struct offsetpose {
     double x; // x方向偏移
     double y; // y方向偏移
@@ -90,7 +98,7 @@ public:
     BoneCuttingRobot() : _modes(10, 8),
                          _f("\033[1;3%1%m "),
                          _fb("\033[1;4%2%;3%1%m "),
-                         _def("\033[0m "),
+                         _def("\033[1;39m "),
                          _axisPositions(3, 0){
         init(); //初始化
     }
@@ -122,8 +130,7 @@ public:
         robot_setmode_c(_robotName, &_modes[0]); //设置运行模式
 
         _interval = get_BusyTs_s_c(getEC_deviceName(0, NULL)); //获取总线读取间隔 单位是秒？
-        std::cout << _f % Color::GREEN << " ====> EtherCAT bus interval is: " << _interval << _def << std::endl;
-
+        std::cout << _f % Color::GREEN << "====> EtherCAT bus interval is: " << _interval << _def << std::endl;
 
         /***** 读取各种所需数据 *****/
         getJointSpacePoints("/hanbing/data/robjoint.POINT"); //读取关节示教点
@@ -198,6 +205,7 @@ public:
 
 
     void getJointSpacePoints(std::string fileName) {
+        std::cout << "getJointSpacePoints" << std::endl;
         _jointSpacePoints.clear();
 
         boost::property_tree::ptree pt;
@@ -205,16 +213,26 @@ public:
 
         for (auto &section : pt) {
             robjoint rj;
-            rj.angle[0] = section.second.get<double>("1");
-            rj.angle[1] = section.second.get<double>("2");
-            rj.angle[2] = section.second.get<double>("3");
-            rj.angle[3] = section.second.get<double>("4");
-            rj.angle[4] = section.second.get<double>("5");
-            rj.angle[5] = section.second.get<double>("6");
-            rj.dof = 6;
+            int dof = 0;
+            for(int i = 0; i < 10; i++) {
+                if(section.second.count(std::to_string(i+1)) != 0) {
+                    rj.angle[i] = section.second.get<double>(std::to_string(i+1));
+                    dof++;
+                }
+            }
+//            rj.angle[0] = section.second.get<double>("1");
+//            rj.angle[1] = section.second.get<double>("2");
+//            rj.angle[2] = section.second.get<double>("3");
+//            rj.angle[3] = section.second.get<double>("4");
+//            rj.angle[4] = section.second.get<double>("5");
+//            rj.angle[5] = section.second.get<double>("6");
+            rj.dof = dof;
+//            std::cout << "dof: " << dof << std::endl;
 
             _jointSpacePoints[section.first] = rj;
         }
+
+        std::cout << _f % Color::GREEN << "===> Loaded Joint Space Teach Points : " << _jointSpacePoints.size() << _def << std::endl;
     }
 
     void getCartesianSpacePoints(std::string fileName) {
@@ -235,6 +253,8 @@ public:
 
             _cartesianSpacePoints[section.first] = rp;
         }
+
+        std::cout << _f % Color::GREEN << "===> Loaded Cartesian Space Teach Points : " << _cartesianSpacePoints.size() << _def << std::endl;
     }
 
     void getSpeedLimits(std::string fileName) {
@@ -245,24 +265,47 @@ public:
 
         for (auto &section : pt) {
             speed sp;
-            sp.per[0] = section.second.get<double>("per1");
-            sp.per[1] = section.second.get<double>("per2");
-            sp.per[2] = section.second.get<double>("per3");
-            sp.per[3] = section.second.get<double>("per4");
-            sp.per[4] = section.second.get<double>("per5");
-            sp.per[5] = section.second.get<double>("per6");
-            sp.per_flag = section.second.get<int>("per_flag");
+            int dof = 0;
+            if(section.second.count("per1") != 0) {
+                sp.per[0] = section.second.get<double>("per1"); dof++;
+            }
+            if(section.second.count("per2") != 0) {
+                sp.per[1] = section.second.get<double>("per2"); dof++;
+            }
+            if(section.second.count("per3") != 0) {
+                sp.per[2] = section.second.get<double>("per3"); dof++;
+            }
+            if(section.second.count("per4") != 0) {
+                sp.per[3] = section.second.get<double>("per4"); dof++;
+            }
+            if(section.second.count("per5") != 0) {
+                sp.per[4] = section.second.get<double>("per5"); dof++;
+            }
+            if(section.second.count("per6") != 0) {
+                sp.per[5] = section.second.get<double>("per6"); dof++;
+            }
+            if(section.second.count("per_flag") != 0) {
+                sp.per_flag = section.second.get<int>("per_flag");
+            }
+            if(section.second.count("tcp") != 0) {
+                sp.per[0] = section.second.get<double>("tcp");
+            }
+            if(section.second.count("tcp_flag") != 0) {
+                sp.tcp_flag = section.second.get<int>("tcp_flag");
+            }
+            if(section.second.count("orl") != 0) {
+                sp.per[0] = section.second.get<double>("orl");
+            }
+            if(section.second.count("orl_flag") != 0) {
+                sp.orl_flag = section.second.get<int>("orl_flag");
+            }
 
-            sp.tcp = section.second.get<double>("tcp");
-            sp.per_flag = section.second.get<int>("tcp_flag");
-
-            sp.orl = section.second.get<double>("orl");
-            sp.orl_flag = section.second.get<int>("orl_flag");
-
-            sp.dof = 6;
+            sp.dof = dof;
 
             _speedLimits[section.first] = sp;
         }
+
+        std::cout << _f % Color::GREEN << "===> Loaded Speed Limits : " << _speedLimits.size() << _def << std::endl;
     }
 
     void getCuttingOffsets(std::string fileName) {
@@ -275,13 +318,16 @@ public:
             offsetpose op;
             op.x = section.second.get<double>("x");
             op.y = section.second.get<double>("y");
-            op.a = section.second.get<double>("a");
+            if(section.second.count("a") != 0)
+                op.a = section.second.get<double>("a");
+            else
+                op.a = 0.0;
             op.f = section.second.get<bool>("f");
 
             _cuttingOffsets.push(op);
-
-
         }
+
+        std::cout << _f % Color::GREEN << "===> Loaded Cutting Offset Points : " << _cuttingOffsets.size() << _def << std::endl;
     }
 
 private:
@@ -304,6 +350,11 @@ private:
 
     std::shared_ptr<SRI::CommEthernet> _cePtr; //六维力传感器通信
     std::shared_ptr<SRI::FTSensor> _ftPtr; //六维力传感器指针
+
+    size_t getHash(const std::string& str){
+        // 获取string对象得字符串值并传递给HAHS_STRING_PIECE计算，获取得返回值为该字符串HASH值
+        return HASH_STRING_PIECE(str.c_str());
+    }
 
 };
 
