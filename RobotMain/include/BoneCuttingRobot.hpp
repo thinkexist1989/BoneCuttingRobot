@@ -101,6 +101,15 @@ public:
 
     void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
         std::cout << _fb % Color::WHITE % Color::GREEN << "SRI::FTSensor" << _def << "Data Comming...." << std::endl;
+        static int i = 0;
+        std::cout << _fb % Color::WHITE % Color::GREEN << _def << "[" << i << "] RT Data is ->  ";
+        for(int i = 0; i < rtData.size(); i++) {
+            for(int j = 0; j < 6; j++) {
+                std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
+            }
+            std::cout << std::endl;
+        }
+        i++;
     }
 
     void init() {

@@ -17,17 +17,6 @@
 #include "sri/commethernet.hpp"
 #include "BoneCuttingRobot.hpp"
 
-void rtDataHandler(std::vector<SRI::RTData<float>>& rtData) {
-    static int i = 0;
-    std::cout << "[" << i << "] RT Data is ->  ";
-    for(int i = 0; i < rtData.size(); i++) {
-        for(int j = 0; j < 6; j++) {
-            std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
-        }
-        std::cout << std::endl;
-    }
-    i++;
-}
 
 int main(int argc, char *argv[]) {
     int err = 0;
@@ -56,16 +45,9 @@ int main(int argc, char *argv[]) {
 //
 //        return -1;
 //    }
+    typedef BoneCuttingRobot BCR;
 
-    SRI::CommEthernet* ce = new SRI::CommEthernet("192.168.1.108", 4008);
-    SRI::FTSensor sensor(ce);
-
-    std::cout << "IP Address: " << sensor.getIpAddress() << std::endl;
-    auto rtMode = sensor.getRealTimeDataMode();
-    auto rtDataValid = sensor.getRealTimeDataValid();
-
-    auto rtData = sensor.getRealTimeDataOnce<float>(rtMode,rtDataValid);
-
+    BCR bcr;
 
     //------------------------wait----------------------------------
     while (1) {
