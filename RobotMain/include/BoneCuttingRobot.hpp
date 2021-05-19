@@ -28,6 +28,7 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #include <map>
 #include <string>
 #include <queue> // FIFO
+#include <memory>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -39,6 +40,11 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 //sri FT sensor
 #include "sri/ftsensor.hpp"
 #include "sri/commethernet.hpp"
+
+#include "DigitalFilters.hpp"
+
+
+#define FTSENSOR_IP "192.168.1.108"
 
 struct offsetpose {
     double x; // x方向偏移
@@ -84,12 +90,17 @@ public:
     BoneCuttingRobot() : _modes(10, 8),
                          _f("\033[1;3%1%m "),
                          _fb("\033[1;4%2%;3%1%m "),
-                         _def("\033[0m ") {
+                         _def("\033[0m "),
+                         _axisPositions(3, 0){
         init(); //初始化
     }
 
     ~BoneCuttingRobot() {
+        _ftPtr->stopRealTimeDataRepeatedly();
+    }
 
+    void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
+        std::cout << _fb % Color::WHITE % Color::GREEN << "SRI::FTSensor" << _def << "Data Comming...." << std::endl;
     }
 
     void init() {
@@ -114,7 +125,17 @@ public:
 
         getCuttingOffsets("/hanbing/data/offsetpose.POINT"); //读取切骨偏移量
 
-        /*****  *****/
+        /***** 初始化六维力传感器 *****/
+        _cePtr = std::make_shared<SRI::CommEthernet>(FTSENSOR_IP, 4008);
+        _ftPtr = std::make_shared<SRI::FTSensor>(_cePtr.get());
+
+        std::cout << _fb % Color::WHITE % Color::GREEN << "SRI::FTSensor" << _def << "===> IP Address: " << _ftPtr->getIpAddress() << std::endl;
+
+        auto rtMode = _ftPtr->getRealTimeDataMode();
+        auto rtDataValid = _ftPtr->getRealTimeDataValid();
+        _ftPtr->startRealTimeDataRepeatedly<float>(boost::bind(&BoneCuttingRobot::ftDataHandler, this, _1), rtMode, rtDataValid);
+
+
 
     }
 
@@ -146,7 +167,23 @@ public:
     }
 
     void setRobotPosition(std::vector<double>& angle) {
+        if (_robotName == nullptr) {
+            std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
+            return;
+        }
 
+        robot_setposition_angle(_robotName, &angle[0]);
+    }
+
+    std::vector<double> getRobotPosition() {
+        if (_robotName == nullptr) {
+            std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
+            return std::vector<double>();
+        }
+
+        robot_getposition_angle(_robotName, &_axisPositions[0]);
+
+        return _axisPositions;
     }
 
 
@@ -249,12 +286,15 @@ private:
 
     std::queue<offsetpose> _cuttingOffsets; //切骨路径规划点，相对于当前位置（先移动到j点）的偏移
 
-    std::vector<double> axisPositions;
+    std::vector<double> _axisPositions;
 
 
     boost::format _f; //设置前景色
     boost::format _fb; //前景背景都设置
     boost::format _def; //恢复默认
+
+    std::shared_ptr<SRI::CommEthernet> _cePtr; //六维力传感器通信
+    std::shared_ptr<SRI::FTSensor> _ftPtr; //六维力传感器指针
 
 };
 
