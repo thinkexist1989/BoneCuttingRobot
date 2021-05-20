@@ -46,13 +46,19 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 
 #define FTSENSOR_IP "192.168.1.108"
+#define FT_CALI_NUM 200
+
+#define SPEED_LIMIT       "V3012"   // V3012对应的速度限制
+#define J0                "j0"      // 切骨起始点关节空间位置
+#define P0                "p201005" // 切骨起始点笛卡尔空间位置
+
 
 // 力传感器状态，空闲，校准中，正常，滤波
 enum FT_STATE {
     FS_IDLE = 0, // 传感器数据不做任何处理
     FS_CALIBRATION = 1,
     FS_NORMAL = 2, // 传感器数据正常返回
-    FS_FILTER = 3, // 传感器数据滤波后返回
+    FS_FILTER = 3  // 传感器数据滤波后返回
 };
 
 // 当前执行器状态，等待，开始切，切完成
@@ -106,7 +112,12 @@ public:
                          _fb("\033[1;3%1%;4%2%m "),
                          _def("\033[0m "),
                          _fmt(" [%ts] "),
-                         _axisPositions(3, 0){
+                         _axisPositions(3, 0.0),
+                         _ftCaliSum(6, 0.0),
+                         _ftGravComp(6, 0.0),
+                         _ftValue(6, 0.0),
+                         _ftFilterValue(6, 0.0)
+                         {
         init(); //初始化
     }
 
@@ -355,10 +366,10 @@ public:
             return false;
     }
 
-private:
+protected:
     char *_robotName = nullptr; //机器人名，用于上电、下电等操作
     std::vector<signed char> _modes; //运行模式 8为csp
-    double _interval; //dt，总线频率，应该是1 ms = 1000 us = 1000000 ns
+    double _interval = 0.001; //dt，总线频率，应该是1 ms = 1000 us = 1000000 ns
 
     std::map<std::string, robjoint> _jointSpacePoints; //关节空间示教点 /hanbing/data/robjoint.POINT
     std::map<std::string, robpose> _cartesianSpacePoints; //笛卡尔空间示教点 /hanbing/data/robpose.POINT
@@ -384,7 +395,13 @@ private:
     CUT_STATE _cutState = CS_WAIT;
     STEP_STATE _stepState = SS_STOP;
 
-private:
+    int _ftCaliCount = 0; // 力传感器校准计数
+    std::vector<double> _ftCaliSum; // 力传感器均值滤波校准加和
+    std::vector<double> _ftGravComp; // 力传感器重力补偿
+    std::vector<double> _ftValue;    // 力传感器实时数据
+    std::vector<double> _ftFilterValue; // 力传感器滤波后的数据
+
+protected:
     size_t getHash(const std::string& str){
         // 获取string对象得字符串值并传递给HAHS_STRING_PIECE计算，获取得返回值为该字符串HASH值
         return HASH_STRING_PIECE(str.c_str());
@@ -397,8 +414,26 @@ private:
         auto rtDataValid = _ftPtr->getRealTimeDataValid();
         _ftPtr->startRealTimeDataRepeatedly<float>(boost::bind(&BoneCuttingRobot::ftDataHandler, this, _1), rtMode, rtDataValid);
 
+        //从示教点中读取所需的点和速度限制等
+        speed speedLimit;
+        robpose p0;
+        robjoint j0;
+        if(getSpeedLimit(SPEED_LIMIT, speedLimit))
+            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get speed limit named >" << SPEED_LIMIT << "<" << _def << std::endl;
+        if(getJointSpacePoint(J0, j0))
+            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get joint space point named >" << J0 << "<" << _def << std::endl;
+        if(getCartesianSpacePoint(P0, p0))
+            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get cartesian space point named >" << P0 << "<" << _def << std::endl;
+
+        //先使能再下电，英立说要不这样做，会有bug
+//        robotPowerOn();
+//        robotPowerOff();
+
         while(isRunning) {
             torqueTimerE(0); //阻塞等待总线数据到来
+
+            auto pos = getRobotPosition();
+            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << pos[0] << "\t" << pos[1] << "\t" << pos[2] << _def << std::flush;
 
             switch (_cutState) {
                 case CS_WAIT:
@@ -414,27 +449,58 @@ private:
     }
 
     void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
-        static int count = 0;
-        std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << count << "] RT Data is ->  ";
-        for(int i = 0; i < rtData.size(); i++) {
-            for(int j = 0; j < 6; j++) {
-                std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
-            }
-            std::cout << _def << std::flush;
-        }
-        count++;
+//        static int count = 0;
+//        std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << count << "] RT Data is ->  ";
+//        for(int i = 0; i < rtData.size(); i++) {
+//            for(int j = 0; j < 6; j++) {
+//                std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
+//            }
+//            std::cout << _def << std::flush;
+//        }
+//        count++;
 
-        switch (_ftState) {
-            case FS_IDLE:
-                break;
-            case FS_CALIBRATION:
-                break;
-            case FS_NORMAL:
-                break;
-            case FS_FILTER:
-                break;
-            default:
-                break;
+        for(auto& ft : rtData) {
+            switch (_ftState) {
+                case FS_IDLE:
+                    _ftGravComp.resize(6, 0.0);
+                    _ftCaliSum.resize(6, 0.0);
+                    _ftCaliCount = 0;
+
+                    for(int i = 0; i < 3; i++) {
+                        _ftValue[i] = ft[i];
+                    }
+
+                    break;
+
+                case FS_CALIBRATION: // 进入校准状态
+                    _ftCaliCount ++;
+                    for(int i=0; i < 3; i++) {
+                        _ftCaliSum[i] += ft[i];
+                    }
+
+                    if(_ftCaliCount >= FT_CALI_NUM) {
+                        for(int i=0; i < 3; i++) {
+                            _ftGravComp[i] = _ftCaliSum[i] / _ftCaliCount;
+                        }
+                        _ftCaliSum.resize(6, 0.0);
+                        _ftCaliCount = 0;
+
+                        _ftState = FS_FILTER; //进入滤波模式
+                    }
+
+                    break;
+
+                case FS_FILTER: // 进入滤波模式
+
+                    break;
+
+                case FS_NORMAL: // 进入正常模式
+
+                    break;
+
+                default:
+                    break;
+            }
         }
 
     }
