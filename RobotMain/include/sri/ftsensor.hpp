@@ -659,7 +659,7 @@ namespace SRI {
             isRepeatedly = true;
             boost::thread(&FTSensor::realTimeDataCyclingHandler<T>, this, rtDataHandler, rtMode, rtValid).detach();
 
-            std::cout << "Getting real time data repeatedly." << std::endl;
+//            std::cout << "Getting real time data repeatedly." << std::endl;
         }
 
         void stopRealTimeDataRepeatedly() {
@@ -763,8 +763,8 @@ namespace SRI {
                     uint32_t PackageLength = recvbuf[2] * 256 + recvbuf[3];
 
                     if(PackageLength != recvbuf.size() - 4) {
-                        std::cout << "SRI::REAL-TIME-WARNING::Package Length not equal to received buf. Package Length is: "
-                                    << PackageLength + 4 << " .  buf size is: " << recvbuf.size() << std::endl;
+//                        std::cout << "SRI::REAL-TIME-WARNING::Package Length not equal to received buf. Package Length is: "
+//                                    << PackageLength + 4 << " .  buf size is: " << recvbuf.size() << std::endl;
                     }
 
                     if (PackageLength > recvbuf.size() - 4) {

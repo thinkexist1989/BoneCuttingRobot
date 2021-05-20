@@ -415,12 +415,12 @@ private:
 
     void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
         static int count = 0;
-        std::cout << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << count << "] RT Data is ->  ";
+        std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << count << "] RT Data is ->  ";
         for(int i = 0; i < rtData.size(); i++) {
             for(int j = 0; j < 6; j++) {
                 std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
             }
-            std::cout << _def << "\r" << std::flush;
+            std::cout << _def << std::flush;
         }
         count++;
 
