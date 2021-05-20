@@ -52,6 +52,9 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #define J0                "j0"      // 切骨起始点关节空间位置
 #define P0                "p201005" // 切骨起始点笛卡尔空间位置
 
+#define DELTA_T           0.005     // 力传感器采样频率
+#define CUTOFF_FREQ       0.5       // 截止频率
+
 
 // 力传感器状态，空闲，校准中，正常，滤波
 enum FT_STATE {
@@ -88,11 +91,11 @@ enum Color {
     DEFAULT = 9
 };
 
-constexpr size_t HASH_STRING_PIECE(const char *string_piece,size_t hashNum=0){
-    return *string_piece?HASH_STRING_PIECE(string_piece+1,(hashNum*131)+*string_piece):hashNum;
+constexpr size_t HASH_STRING_PIECE(const char *string_piece, size_t hashNum = 0) {
+    return *string_piece ? HASH_STRING_PIECE(string_piece + 1, (hashNum * 131) + *string_piece) : hashNum;
 }
 
-constexpr size_t operator "" _HASH(const char *string_pice,size_t){
+constexpr size_t operator "" _HASH(const char *string_pice, size_t) {
     return HASH_STRING_PIECE(string_pice);
 }
 
@@ -116,17 +119,21 @@ public:
                          _ftCaliSum(6, 0.0),
                          _ftGravComp(6, 0.0),
                          _ftValue(6, 0.0),
-                         _ftFilterValue(6, 0.0)
-                         {
+                         _ftFilterValue(6, 0.0),
+                         _lp2(6, LowPassFilter2(DELTA_T, 1 / (2 * M_PI * CUTOFF_FREQ))) {
+
+
         init(); //初始化
+
     }
 
     ~BoneCuttingRobot() {
         _ftPtr->stopRealTimeDataRepeatedly();
     }
 
-    void startWorkingThread(bool& isRunning) {
-        std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING >>>>>>>>>>>" << _def << std::endl;
+    void startWorkingThread(bool &isRunning) {
+        std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING >>>>>>>>>>>" << _def
+                  << std::endl;
         boost::thread(&BoneCuttingRobot::boneCuttingHandler, this, isRunning).detach();
     }
 
@@ -140,7 +147,8 @@ public:
         robot_setmode_c(_robotName, &_modes[0]); //设置运行模式
 
         _interval = get_BusyTs_s_c(getEC_deviceName(0, NULL)); //获取总线读取间隔 单位是秒？
-        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "EtherCAT bus interval is: " << _interval << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "EtherCAT bus interval is: "
+                  << _interval << _def << std::endl;
 
         /***** 读取各种所需数据 *****/
         readJointSpacePoints("/hanbing/data/robjoint.POINT"); //读取关节示教点
@@ -152,15 +160,16 @@ public:
         readCuttingOffsets("/hanbing/data/offsetpose.POINT"); //读取切骨偏移量,
 
         /***** 初始化六维力传感器 *****/
-        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor is initializing ...." <<_def << std::flush;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor is initializing ...." << _def
+                  << std::flush;
 
         _cePtr = std::make_shared<SRI::CommEthernet>(FTSENSOR_IP, 4008);
         _ftPtr = std::make_shared<SRI::FTSensor>(_cePtr.get());
 
         std::cout << " finished" << std::endl;
 
-        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor IP Address: " << _ftPtr->getIpAddress() << _def << std::endl;
-
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor IP Address: "
+                  << _ftPtr->getIpAddress() << _def << std::endl;
 
 
     }
@@ -192,7 +201,7 @@ public:
         axis_setposition_angle(_robotName, position, axisId);
     }
 
-    void setRobotPosition(std::vector<double>& angle) {
+    void setRobotPosition(std::vector<double> &angle) {
         if (_robotName == nullptr) {
             std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
             return;
@@ -213,7 +222,6 @@ public:
     }
 
 
-
     void readJointSpacePoints(std::string fileName) {
         _jointSpacePoints.clear();
 
@@ -223,9 +231,9 @@ public:
         for (auto &section : pt) {
             robjoint rj;
             int dof = 0;
-            for(int i = 0; i < 10; i++) {
-                if(section.second.count(std::to_string(i+1)) != 0) {
-                    rj.angle[i] = section.second.get<double>(std::to_string(i+1));
+            for (int i = 0; i < 10; i++) {
+                if (section.second.count(std::to_string(i + 1)) != 0) {
+                    rj.angle[i] = section.second.get<double>(std::to_string(i + 1));
                     dof++;
                 }
             }
@@ -241,7 +249,8 @@ public:
             _jointSpacePoints[section.first] = rj;
         }
 
-        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Joint Space Teach Points : " << _jointSpacePoints.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Joint Space Teach Points : "
+                  << _jointSpacePoints.size() << _def << std::endl;
     }
 
     void readCartesianSpacePoints(std::string fileName) {
@@ -263,7 +272,8 @@ public:
             _cartesianSpacePoints[section.first] = rp;
         }
 
-        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cartesian Space Teach Points : " << _cartesianSpacePoints.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cartesian Space Teach Points : "
+                  << _cartesianSpacePoints.size() << _def << std::endl;
     }
 
     void readSpeedLimits(std::string fileName) {
@@ -275,37 +285,43 @@ public:
         for (auto &section : pt) {
             speed sp;
             int dof = 0;
-            if(section.second.count("per1") != 0) {
-                sp.per[0] = section.second.get<double>("per1"); dof++;
+            if (section.second.count("per1") != 0) {
+                sp.per[0] = section.second.get<double>("per1");
+                dof++;
             }
-            if(section.second.count("per2") != 0) {
-                sp.per[1] = section.second.get<double>("per2"); dof++;
+            if (section.second.count("per2") != 0) {
+                sp.per[1] = section.second.get<double>("per2");
+                dof++;
             }
-            if(section.second.count("per3") != 0) {
-                sp.per[2] = section.second.get<double>("per3"); dof++;
+            if (section.second.count("per3") != 0) {
+                sp.per[2] = section.second.get<double>("per3");
+                dof++;
             }
-            if(section.second.count("per4") != 0) {
-                sp.per[3] = section.second.get<double>("per4"); dof++;
+            if (section.second.count("per4") != 0) {
+                sp.per[3] = section.second.get<double>("per4");
+                dof++;
             }
-            if(section.second.count("per5") != 0) {
-                sp.per[4] = section.second.get<double>("per5"); dof++;
+            if (section.second.count("per5") != 0) {
+                sp.per[4] = section.second.get<double>("per5");
+                dof++;
             }
-            if(section.second.count("per6") != 0) {
-                sp.per[5] = section.second.get<double>("per6"); dof++;
+            if (section.second.count("per6") != 0) {
+                sp.per[5] = section.second.get<double>("per6");
+                dof++;
             }
-            if(section.second.count("per_flag") != 0) {
+            if (section.second.count("per_flag") != 0) {
                 sp.per_flag = section.second.get<int>("per_flag");
             }
-            if(section.second.count("tcp") != 0) {
+            if (section.second.count("tcp") != 0) {
                 sp.per[0] = section.second.get<double>("tcp");
             }
-            if(section.second.count("tcp_flag") != 0) {
+            if (section.second.count("tcp_flag") != 0) {
                 sp.tcp_flag = section.second.get<int>("tcp_flag");
             }
-            if(section.second.count("orl") != 0) {
+            if (section.second.count("orl") != 0) {
                 sp.per[0] = section.second.get<double>("orl");
             }
-            if(section.second.count("orl_flag") != 0) {
+            if (section.second.count("orl_flag") != 0) {
                 sp.orl_flag = section.second.get<int>("orl_flag");
             }
 
@@ -314,7 +330,8 @@ public:
             _speedLimits[section.first] = sp;
         }
 
-        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) <<  "Loaded Speed Limits : " << _speedLimits.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Speed Limits : "
+                  << _speedLimits.size() << _def << std::endl;
     }
 
     void readCuttingOffsets(std::string fileName) {
@@ -327,7 +344,7 @@ public:
             offsetpose op;
             op.x = section.second.get<double>("x");
             op.y = section.second.get<double>("y");
-            if(section.second.count("a") != 0)
+            if (section.second.count("a") != 0)
                 op.a = section.second.get<double>("a");
             else
                 op.a = 0.0;
@@ -336,33 +353,31 @@ public:
             _cuttingOffsets.push(op);
         }
 
-        std::cout << _f % Color::GREEN  << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cutting Offset Points : " << _cuttingOffsets.size() << _def << std::endl;
+        std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cutting Offset Points : "
+                  << _cuttingOffsets.size() << _def << std::endl;
     }
 
-    bool getJointSpacePoint(const std::string& name, robjoint& rj) {
-        if(_jointSpacePoints.count(name) != 0) {
+    bool getJointSpacePoint(const std::string &name, robjoint &rj) {
+        if (_jointSpacePoints.count(name) != 0) {
             rj = _jointSpacePoints[name];
             return true;
-        }
-        else
+        } else
             return false;
     }
 
-    bool getCartesianSpacePoint(const std::string& name, robpose& rp) {
-        if(_cartesianSpacePoints.count(name) != 0) {
+    bool getCartesianSpacePoint(const std::string &name, robpose &rp) {
+        if (_cartesianSpacePoints.count(name) != 0) {
             rp = _cartesianSpacePoints[name];
             return true;
-        }
-        else
+        } else
             return false;
     }
 
-    bool getSpeedLimit(const std::string& name, speed& sp) {
-        if(_speedLimits.count(name) != 0) {
+    bool getSpeedLimit(const std::string &name, speed &sp) {
+        if (_speedLimits.count(name) != 0) {
             sp = _speedLimits[name];
             return true;
-        }
-        else
+        } else
             return false;
     }
 
@@ -401,39 +416,48 @@ protected:
     std::vector<double> _ftValue;    // 力传感器实时数据
     std::vector<double> _ftFilterValue; // 力传感器滤波后的数据
 
+    std::vector<LowPassFilter2> _lp2; // 保存2阶低通滤波器指针
+
+    bool newFtDataComing = false;
+
 protected:
-    size_t getHash(const std::string& str){
+    size_t getHash(const std::string &str) {
         // 获取string对象得字符串值并传递给HAHS_STRING_PIECE计算，获取得返回值为该字符串HASH值
         return HASH_STRING_PIECE(str.c_str());
     }
 
-    void boneCuttingHandler(bool& isRunning) {
+    void boneCuttingHandler(bool &isRunning) {
 
         //六维力传感器开始循环接收数据
         auto rtMode = _ftPtr->getRealTimeDataMode();
         auto rtDataValid = _ftPtr->getRealTimeDataValid();
-        _ftPtr->startRealTimeDataRepeatedly<float>(boost::bind(&BoneCuttingRobot::ftDataHandler, this, _1), rtMode, rtDataValid);
+        _ftPtr->startRealTimeDataRepeatedly<float>(boost::bind(&BoneCuttingRobot::ftDataHandler, this, _1), rtMode,
+                                                   rtDataValid);
 
         //从示教点中读取所需的点和速度限制等
         speed speedLimit;
         robpose p0;
         robjoint j0;
-        if(getSpeedLimit(SPEED_LIMIT, speedLimit))
-            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get speed limit named >" << SPEED_LIMIT << "<" << _def << std::endl;
-        if(getJointSpacePoint(J0, j0))
-            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get joint space point named >" << J0 << "<" << _def << std::endl;
-        if(getCartesianSpacePoint(P0, p0))
-            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get cartesian space point named >" << P0 << "<" << _def << std::endl;
+        if (getSpeedLimit(SPEED_LIMIT, speedLimit))
+            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get speed limit named >"
+                      << SPEED_LIMIT << "<" << _def << std::endl;
+        if (getJointSpacePoint(J0, j0))
+            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt)
+                      << "Can not get joint space point named >" << J0 << "<" << _def << std::endl;
+        if (getCartesianSpacePoint(P0, p0))
+            std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt)
+                      << "Can not get cartesian space point named >" << P0 << "<" << _def << std::endl;
 
         //先使能再下电，英立说要不这样做，会有bug
 //        robotPowerOn();
 //        robotPowerOff();
 
-        while(isRunning) {
+        while (isRunning) {
             torqueTimerE(0); //阻塞等待总线数据到来
 
             auto pos = getRobotPosition();
-            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << pos[0] << "\t" << pos[1] << "\t" << pos[2] << _def << std::flush;
+            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << pos[0] << "\t" << pos[1]
+                      << "\t" << pos[2] << _def << std::flush;
 
             switch (_cutState) {
                 case CS_WAIT:
@@ -448,7 +472,7 @@ protected:
         }
     }
 
-    void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
+    void ftDataHandler(std::vector<SRI::RTData<float>> &rtData) {
 //        static int count = 0;
 //        std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << count << "] RT Data is ->  ";
 //        for(int i = 0; i < rtData.size(); i++) {
@@ -459,27 +483,30 @@ protected:
 //        }
 //        count++;
 
-        for(auto& ft : rtData) {
+        for (auto &ft : rtData) {
+
+            for (int i = 0; i < 3; i++) {
+                _ftValue[i] = ft[i];
+//                _ftFilterValue[i] = _lp2[i].update(_ftValue[i]);
+            }
+
+
             switch (_ftState) {
                 case FS_IDLE:
                     _ftGravComp.resize(6, 0.0);
                     _ftCaliSum.resize(6, 0.0);
                     _ftCaliCount = 0;
 
-                    for(int i = 0; i < 3; i++) {
-                        _ftValue[i] = ft[i];
-                    }
-
                     break;
 
                 case FS_CALIBRATION: // 进入校准状态
-                    _ftCaliCount ++;
-                    for(int i=0; i < 3; i++) {
+                    _ftCaliCount++;
+                    for (int i = 0; i < 3; i++) {
                         _ftCaliSum[i] += ft[i];
                     }
 
-                    if(_ftCaliCount >= FT_CALI_NUM) {
-                        for(int i=0; i < 3; i++) {
+                    if (_ftCaliCount >= FT_CALI_NUM) {
+                        for (int i = 0; i < 3; i++) {
                             _ftGravComp[i] = _ftCaliSum[i] / _ftCaliCount;
                         }
                         _ftCaliSum.resize(6, 0.0);
@@ -491,16 +518,26 @@ protected:
                     break;
 
                 case FS_FILTER: // 进入滤波模式
+                    for (int i = 0; i < 3; i++) {
+                        _ftFilterValue[i] = _lp2[i].update(_ftValue[i]);
+                    }
 
                     break;
 
                 case FS_NORMAL: // 进入正常模式
+                    std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "FT Data is -> "
+                              << "x: " << _ftValue[0] << "\t" << "y: " << _ftValue[1] << "\t" << "z: " << _ftValue[2]
+                              << _def << std::flush;
 
                     break;
 
                 default:
+                    std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt)
+                              << "Unrecognized FT Sensor State" << _def << std::endl;
                     break;
             }
+
+            newFtDataComing = true; // 新数据到来标志
         }
 
     }
