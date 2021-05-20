@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
 //        return -1;
 //    }
     BoneCuttingRobot bcr;
+    bcr.startWorkingThread(isRuning);
 
     //------------------------wait----------------------------------
     while (isRuning) {

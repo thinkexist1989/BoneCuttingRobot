@@ -150,10 +150,6 @@ public:
 
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor IP Address: " << _ftPtr->getIpAddress() << _def << std::endl;
 
-        auto rtMode = _ftPtr->getRealTimeDataMode();
-        auto rtDataValid = _ftPtr->getRealTimeDataValid();
-        _ftPtr->startRealTimeDataRepeatedly<float>(boost::bind(&BoneCuttingRobot::ftDataHandler, this, _1), rtMode, rtDataValid);
-
 
 
     }
@@ -395,6 +391,12 @@ private:
     }
 
     void boneCuttingHandler(bool& isRunning) {
+
+        //六维力传感器开始循环接收数据
+        auto rtMode = _ftPtr->getRealTimeDataMode();
+        auto rtDataValid = _ftPtr->getRealTimeDataValid();
+        _ftPtr->startRealTimeDataRepeatedly<float>(boost::bind(&BoneCuttingRobot::ftDataHandler, this, _1), rtMode, rtDataValid);
+
         while(isRunning) {
             torqueTimerE(0); //阻塞等待总线数据到来
 
