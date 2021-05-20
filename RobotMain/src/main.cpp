@@ -18,6 +18,8 @@
 #include "sri/commethernet.hpp"
 #include "BoneCuttingRobot.hpp"
 
+#include <boost/thread.hpp>
+
 bool isRuning = true;
 
 void signalHandler(int signo) {
@@ -61,12 +63,11 @@ int main(int argc, char *argv[]) {
 //
 //        return -1;
 //    }
-    typedef BoneCuttingRobot BCR;
-
-    BCR bcr;
+    BoneCuttingRobot bcr;
 
     //------------------------wait----------------------------------
     while (isRuning) {
+
         sleep(1);
     }
     return EXIT_SUCCESS;

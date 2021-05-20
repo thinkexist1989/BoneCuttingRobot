@@ -47,6 +47,41 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 #define FTSENSOR_IP "192.168.1.108"
 
+// 力传感器状态，空闲，校准中，正常，滤波
+enum FT_STATE {
+    FS_IDLE = 0, // 传感器数据不做任何处理
+    FS_CALIBRATION = 1,
+    FS_NORMAL = 2, // 传感器数据正常返回
+    FS_FILTER = 3, // 传感器数据滤波后返回
+};
+
+// 当前执行器状态，等待，开始切，切完成
+enum CUT_STATE {
+    CS_WAIT = 0,
+    CS_START = 1,
+    CS_FINISH = 2
+};
+
+// 在切骨过程中的状态，前进还是后退
+enum STEP_STATE {
+    SS_STOP = 0,
+    SS_FORWARD = 1,
+    SS_BACKWARD = 2
+};
+
+//终端显示颜色
+enum Color {
+    BLACK = 0,
+    RED = 1,
+    GREEN = 2,
+    YELLOW = 3,
+    BLUE = 4,
+    MAGENTA = 5,
+    CYAN = 6,
+    WHITE = 7,
+    DEFAULT = 9
+};
+
 constexpr size_t HASH_STRING_PIECE(const char *string_piece,size_t hashNum=0){
     return *string_piece?HASH_STRING_PIECE(string_piece+1,(hashNum*131)+*string_piece):hashNum;
 }
@@ -61,37 +96,6 @@ struct offsetpose {
     double a; // 角度偏移
     bool f; // 是否有力控
 };
-
-enum Color {
-    BLACK = 0,
-    RED = 1,
-    GREEN = 2,
-    YELLOW = 3,
-    BLUE = 4,
-    MAGENTA = 5,
-    CYAN = 6,
-    WHITE = 7,
-    DEFAULT = 9
-};
-//
-//class TermColor {
-//    std::string _str;
-//    static boost::format f; //设置前景色
-//    static boost::format fb; //前景背景都设置
-//    static boost::format def; //恢复默认
-//public:
-//    TermColor() : f("\033[1;3%1%m "),
-//                  fb("\033[1;4%2%;3%1%m "),
-//                  def("\033[0m") {
-//
-//    }
-//
-//    friend std::ostream &
-//    operator<<(std::ostream &os, const TermColor &tc) {
-//        return os << "\033[0m";
-//    }
-//};
-
 
 class BoneCuttingRobot {
 
@@ -110,16 +114,9 @@ public:
         _ftPtr->stopRealTimeDataRepeatedly();
     }
 
-    void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
-        static int i = 0;
-        std::cout << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << i << "] RT Data is ->  ";
-        for(int i = 0; i < rtData.size(); i++) {
-            for(int j = 0; j < 6; j++) {
-                std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
-            }
-            std::cout << _def << std::endl;
-        }
-        i++;
+    void startWorkingThread(bool& isRunning) {
+        std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING >>>>>>>>>>>" << _def << std::endl;
+        boost::thread(&BoneCuttingRobot::boneCuttingHandler, this, isRunning).detach();
     }
 
     void init() {
@@ -135,13 +132,13 @@ public:
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "EtherCAT bus interval is: " << _interval << _def << std::endl;
 
         /***** 读取各种所需数据 *****/
-        getJointSpacePoints("/hanbing/data/robjoint.POINT"); //读取关节示教点
+        readJointSpacePoints("/hanbing/data/robjoint.POINT"); //读取关节示教点
 
-        getCartesianSpacePoints("/hanbing/data/robpose.POINT"); // 读取笛卡尔空间示教点
+        readCartesianSpacePoints("/hanbing/data/robpose.POINT"); // 读取笛卡尔空间示教点
 
-        getSpeedLimits("/hanbing/data/speed.POINT"); // 读取速度限制
+        readSpeedLimits("/hanbing/data/speed.POINT"); // 读取速度限制
 
-        getCuttingOffsets("/hanbing/data/offsetpose.POINT"); //读取切骨偏移量
+        readCuttingOffsets("/hanbing/data/offsetpose.POINT"); //读取切骨偏移量,
 
         /***** 初始化六维力传感器 *****/
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor is initializing ...." <<_def << std::flush;
@@ -210,7 +207,7 @@ public:
 
 
 
-    void getJointSpacePoints(std::string fileName) {
+    void readJointSpacePoints(std::string fileName) {
         _jointSpacePoints.clear();
 
         boost::property_tree::ptree pt;
@@ -240,7 +237,7 @@ public:
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Joint Space Teach Points : " << _jointSpacePoints.size() << _def << std::endl;
     }
 
-    void getCartesianSpacePoints(std::string fileName) {
+    void readCartesianSpacePoints(std::string fileName) {
         _cartesianSpacePoints.clear();
 
         boost::property_tree::ptree pt;
@@ -262,7 +259,7 @@ public:
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cartesian Space Teach Points : " << _cartesianSpacePoints.size() << _def << std::endl;
     }
 
-    void getSpeedLimits(std::string fileName) {
+    void readSpeedLimits(std::string fileName) {
         _speedLimits.clear();
 
         boost::property_tree::ptree pt;
@@ -313,7 +310,7 @@ public:
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) <<  "Loaded Speed Limits : " << _speedLimits.size() << _def << std::endl;
     }
 
-    void getCuttingOffsets(std::string fileName) {
+    void readCuttingOffsets(std::string fileName) {
         _cuttingOffsets = std::queue<offsetpose>(); // 清空队列
 
         boost::property_tree::ptree pt;
@@ -333,6 +330,33 @@ public:
         }
 
         std::cout << _f % Color::GREEN  << "[INFO]" << _timer.format(4, _fmt) << "Loaded Cutting Offset Points : " << _cuttingOffsets.size() << _def << std::endl;
+    }
+
+    bool getJointSpacePoint(const std::string& name, robjoint& rj) {
+        if(_jointSpacePoints.count(name) != 0) {
+            rj = _jointSpacePoints[name];
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool getCartesianSpacePoint(const std::string& name, robpose& rp) {
+        if(_cartesianSpacePoints.count(name) != 0) {
+            rp = _cartesianSpacePoints[name];
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool getSpeedLimit(const std::string& name, speed& sp) {
+        if(_speedLimits.count(name) != 0) {
+            sp = _speedLimits[name];
+            return true;
+        }
+        else
+            return false;
     }
 
 private:
@@ -360,9 +384,57 @@ private:
     std::shared_ptr<SRI::CommEthernet> _cePtr; //六维力传感器通信
     std::shared_ptr<SRI::FTSensor> _ftPtr; //六维力传感器指针
 
+    FT_STATE _ftState = FS_IDLE;
+    CUT_STATE _cutState = CS_WAIT;
+    STEP_STATE _stepState = SS_STOP;
+
+private:
     size_t getHash(const std::string& str){
         // 获取string对象得字符串值并传递给HAHS_STRING_PIECE计算，获取得返回值为该字符串HASH值
         return HASH_STRING_PIECE(str.c_str());
+    }
+
+    void boneCuttingHandler(bool& isRunning) {
+        while(isRunning) {
+            torqueTimerE(0); //阻塞等待总线数据到来
+
+            switch (_cutState) {
+                case CS_WAIT:
+                    break;
+                case CS_START:
+                    break;
+                case CS_FINISH:
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    void ftDataHandler(std::vector<SRI::RTData<float>>& rtData) {
+        static int count = 0;
+        std::cout << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << count << "] RT Data is ->  ";
+        for(int i = 0; i < rtData.size(); i++) {
+            for(int j = 0; j < 6; j++) {
+                std::cout << "Ch " << j << ": " << rtData[i][j] << "\t";
+            }
+            std::cout << _def << "\r" << std::flush;
+        }
+        count++;
+
+        switch (_ftState) {
+            case FS_IDLE:
+                break;
+            case FS_CALIBRATION:
+                break;
+            case FS_NORMAL:
+                break;
+            case FS_FILTER:
+                break;
+            default:
+                break;
+        }
+
     }
 
 };
