@@ -17,13 +17,14 @@
 #include "sri/ftsensor.hpp"
 #include "sri/commethernet.hpp"
 #include "BoneCuttingRobot.hpp"
+#include "Joystick.hpp"
 
 #include <boost/thread.hpp>
 
 bool isRuning = true;
 
 void signalHandler(int signo) {
-    if(signo == SIGINT) {
+    if (signo == SIGINT) {
         std::cout << "\033[1;31m" << "[!!SIGNAL!!]" << "INTERRUPT by CTRL-C" << "\033[0m" << std::endl;
         isRuning = false;
         exit(0);
@@ -44,32 +45,38 @@ int main(int argc, char *argv[]) {
         return err;
     }
 
-    if(signal(SIGINT, signalHandler) == SIG_ERR) {
+    if (signal(SIGINT, signalHandler) == SIG_ERR) {
         std::cout << "\033[1;31m" << "Can not catch SIGINT" << "\033[0m" << std::endl;
     }
 
-
-//    pthread_mutex_init(&mutex_torquesensor1, NULL);
-//
-//
-//    SOCKET_HANDLE socketHandle;
-//    int resInit = Init_SRIforce(&socketHandle);
-//    if (resInit == 0) {
-//    } else if (resInit == -2) {
-//
-//        Close(&socketHandle);
-//        return -1;
-//    } else {
-//
-//        return -1;
-//    }
     BoneCuttingRobot bcr;
     bcr.startWorkingThread(isRuning);
+
+    Joystick joystick(0);
+    if (!joystick.isFound()) {
+        printf("open failed.\n");
+        exit(1);
+    }
 
     //------------------------wait----------------------------------
     while (isRuning) {
 
-        sleep(1);
+        JoystickEvent event;
+        if (joystick.sample(&event)) {
+            if (event.isButton()) {
+                if ((event.number == BETOP_BUTTON_A) || (event.number == BETOP_BUTTON_Y))
+                    printf("Button %u is %s\n",
+                           event.number,
+                           event.value == 0 ? "up" : "down");
+            } else if (event.isAxis()) {
+                if((event.number == BETOP_AXIS_LT) || (event.number == BETOP_AXIS_RT))
+                    printf("Axis %u is at position %d\n", event.number, event.value);
+            }
+        }
+
+        usleep(1000);
+
+//        sleep(1);
     }
     return EXIT_SUCCESS;
 }
