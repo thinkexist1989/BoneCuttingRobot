@@ -439,15 +439,31 @@ protected:
         speed speedLimit;
         robpose p0;
         robjoint j0;
-        if (getSpeedLimit(SPEED_LIMIT, speedLimit))
+
+        if (!getSpeedLimit(SPEED_LIMIT, speedLimit)) {
             std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get speed limit named >"
                       << SPEED_LIMIT << "<" << _def << std::endl;
-        if (getJointSpacePoint(J0, j0))
+        } else {
+            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
+                      << "Successfully get speed limit named >"
+                      << SPEED_LIMIT << "<" << _def << std::endl;
+        }
+
+        if (!getJointSpacePoint(J0, j0)) {
             std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt)
                       << "Can not get joint space point named >" << J0 << "<" << _def << std::endl;
-        if (getCartesianSpacePoint(P0, p0))
+        } else {
+            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
+                      << "Successfully get joint space point named >" << J0 << "<" << _def << std::endl;
+        }
+
+        if (!getCartesianSpacePoint(P0, p0)) {
             std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt)
                       << "Can not get cartesian space point named >" << P0 << "<" << _def << std::endl;
+        } else {
+            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
+                      << "Successfully get cartesian space point named >" << P0 << "<" << _def << std::endl;
+        }
 
         //先使能再下电，英立说要不这样做，会有bug
 //        robotPowerOn();
