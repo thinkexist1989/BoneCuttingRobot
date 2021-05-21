@@ -419,6 +419,7 @@ protected:
     std::vector<LowPassFilter2> _lp2; // 保存2阶低通滤波器指针
 
     bool newFtDataComing = false;
+    boost::mutex _ftMutex;          // 用于力传感器读取的互斥量
 
 protected:
     size_t getHash(const std::string &str) {
@@ -455,7 +456,9 @@ protected:
         while (isRunning) {
             torqueTimerE(0); //阻塞等待总线数据到来
 
+            //每个循环先获取一下当前机器人位姿
             auto pos = getRobotPosition();
+            //TODO: DEBUG信息输出
             std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << pos[0] << "\t" << pos[1]
                       << "\t" << pos[2] << _def << std::flush;
 
@@ -473,6 +476,7 @@ protected:
     }
 
     void ftDataHandler(std::vector<SRI::RTData<float>> &rtData) {
+        //TODO: DEBUG信息输出
 //        static int count = 0;
 //        std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "[" << count << "] RT Data is ->  ";
 //        for(int i = 0; i < rtData.size(); i++) {
@@ -482,6 +486,8 @@ protected:
 //            std::cout << _def << std::flush;
 //        }
 //        count++;
+
+        _ftMutex.lock();
 
         for (auto &ft : rtData) {
 
@@ -539,6 +545,8 @@ protected:
 
             newFtDataComing = true; // 新数据到来标志
         }
+
+        _ftMutex.unlock();
 
     }
 
