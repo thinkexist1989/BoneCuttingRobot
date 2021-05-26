@@ -50,33 +50,15 @@ int main(int argc, char *argv[]) {
     }
 
     BoneCuttingRobot bcr;
-    bcr.startWorkingThread(isRuning);
+    bcr.startWorkingThread();
 
     Joystick joystick(0);
-    if (!joystick.isFound()) {
-        printf("open failed.\n");
-        exit(1);
-    }
+
 
     //------------------------wait----------------------------------
     while (isRuning) {
 
-        JoystickEvent event;
-        if (joystick.sample(&event)) {
-            if (event.isButton()) {
-                if ((event.number == BETOP_BUTTON_A) || (event.number == BETOP_BUTTON_Y))
-                    printf("Button %u is %s\n",
-                           event.number,
-                           event.value == 0 ? "up" : "down");
-            } else if (event.isAxis()) {
-                if((event.number == BETOP_AXIS_LT) || (event.number == BETOP_AXIS_RT))
-                    printf("Axis %u is at position %d\n", event.number, event.value);
-            }
-        }
-
-        usleep(1000);
-
-//        sleep(1);
+        sleep(1);
     }
     return EXIT_SUCCESS;
 }

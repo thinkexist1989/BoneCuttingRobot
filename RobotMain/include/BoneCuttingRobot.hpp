@@ -44,6 +44,10 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 #include "DigitalFilters.hpp"
 
+//Betop Joystick
+#include "Joystick.hpp"
+#include "LinearMotor.hpp"
+
 
 #define FTSENSOR_IP "192.168.1.108"
 #define FT_CALI_NUM 200
@@ -54,6 +58,8 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 #define DELTA_T           0.005     // 力传感器采样频率
 #define CUTOFF_FREQ       0.5       // 截止频率
+
+#define LINEAR_MOTOR_DEV  "/dev/ttyS0"
 
 
 // 力传感器状态，空闲，校准中，正常，滤波
@@ -120,7 +126,9 @@ public:
                          _ftGravComp(6, 0.0),
                          _ftValue(6, 0.0),
                          _ftFilterValue(6, 0.0),
-                         _lp2(6, LowPassFilter2(DELTA_T, 1 / (2 * M_PI * CUTOFF_FREQ))) {
+                         _lp2(6, LowPassFilter2(DELTA_T, 1 / (2 * M_PI * CUTOFF_FREQ))),
+                         _joystick(0),
+                         _linearMotor(LINEAR_MOTOR_DEV) {
 
 
         init(); //初始化
@@ -131,12 +139,20 @@ public:
         _ftPtr->stopRealTimeDataRepeatedly();
     }
 
-    void startWorkingThread(bool &isRunning) {
+    /// @brief 开始工作线程
+    void startWorkingThread() {
+        isRunning = true;
         std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING >>>>>>>>>>>" << _def
                   << std::endl;
-        boost::thread(&BoneCuttingRobot::boneCuttingHandler, this, isRunning).detach();
+        boost::thread(&BoneCuttingRobot::boneCuttingHandler, this).detach();
     }
 
+    /// @brief 停止工作线程
+    void stopWorkingThread() {
+        isRunning = false;
+    }
+
+    /// @brief 初始化机器人
     void init() {
         _robotName = get_name_robotEC_deviceHandle_c(getEC_deviceName(0, NULL), 0);
         if (_robotName == nullptr) {
@@ -171,9 +187,20 @@ public:
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor IP Address: "
                   << _ftPtr->getIpAddress() << _def << std::endl;
 
+        /***** 手柄遥控 *****/
+        if (!_joystick.isFound()) {
+            std::cout << _f % Color::YELLOW << "[WARNING]" << _timer.format(4, _fmt) << "Joystick is not found."
+                      << _def << std::endl;
+        } else {
+            boost::thread(&BoneCuttingRobot::joystickHandler, this).detach();
+        }
+
+        boost::thread(&LinearMotor::startProcessCyclicing, &_linearMotor).detach();
+        _linearMotor.setPositionNR();
 
     }
 
+    /// @brief 机器人上电
     void robotPowerOn() {
         if (_robotName == nullptr) {
             std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
@@ -183,6 +210,7 @@ public:
         robot_power_c(_robotName);
     }
 
+    /// @brief 机器人下电
     void robotPowerOff() {
         if (_robotName == nullptr) {
             std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
@@ -192,6 +220,9 @@ public:
         robot_poweroff_c(_robotName);
     }
 
+    /// @brief 设置单轴位置
+    /// @param axisId 轴ID
+    /// @param position 期望位置
     void setAxisPosition(int axisId, double position) {
         if (_robotName == nullptr) {
             std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
@@ -201,6 +232,8 @@ public:
         axis_setposition_angle(_robotName, position, axisId);
     }
 
+    /// @brief 设置机器人关节位置
+    /// @param angle 期望关节位置
     void setRobotPosition(std::vector<double> &angle) {
         if (_robotName == nullptr) {
             std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
@@ -210,6 +243,8 @@ public:
         robot_setposition_angle(_robotName, &angle[0]);
     }
 
+    /// @brief 读取机器人关节位置
+    /// @return 返回关节位置的vector容器
     std::vector<double> getRobotPosition() {
         if (_robotName == nullptr) {
             std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
@@ -221,8 +256,9 @@ public:
         return _axisPositions;
     }
 
-
-    void readJointSpacePoints(std::string fileName) {
+    /// @brief 从robjoint.POINT中读取关节空间示教点
+    /// @param fileName 保存有关节空间示教点的文件
+    void readJointSpacePoints(const std::string &fileName) {
         _jointSpacePoints.clear();
 
         boost::property_tree::ptree pt;
@@ -253,7 +289,9 @@ public:
                   << _jointSpacePoints.size() << _def << std::endl;
     }
 
-    void readCartesianSpacePoints(std::string fileName) {
+    /// @brief 从robpose.POINT中读取笛卡尔空间示教点
+    /// @param fileName 保存有笛卡尔空间示教点的文件
+    void readCartesianSpacePoints(const std::string &fileName) {
         _cartesianSpacePoints.clear();
 
         boost::property_tree::ptree pt;
@@ -276,7 +314,9 @@ public:
                   << _cartesianSpacePoints.size() << _def << std::endl;
     }
 
-    void readSpeedLimits(std::string fileName) {
+    /// @brief 从speed.POINT中读取速度限制
+    /// @param fileName 保存有速度限制的文件
+    void readSpeedLimits(const std::string &fileName) {
         _speedLimits.clear();
 
         boost::property_tree::ptree pt;
@@ -334,7 +374,9 @@ public:
                   << _speedLimits.size() << _def << std::endl;
     }
 
-    void readCuttingOffsets(std::string fileName) {
+    /// @brief 从offset.POINT中读取切骨点偏移
+    /// @param fileName 保存切骨点偏移的文件
+    void readCuttingOffsets(const std::string &fileName) {
         _cuttingOffsets = std::queue<offsetpose>(); // 清空队列
 
         boost::property_tree::ptree pt;
@@ -357,6 +399,9 @@ public:
                   << _cuttingOffsets.size() << _def << std::endl;
     }
 
+    /// @brief 获取相应的关节空间示教点
+    /// @param name 示教点名称
+    /// @param rj   关节点信息
     bool getJointSpacePoint(const std::string &name, robjoint &rj) {
         if (_jointSpacePoints.count(name) != 0) {
             rj = _jointSpacePoints[name];
@@ -365,6 +410,9 @@ public:
             return false;
     }
 
+    /// @brief 获取相应的笛卡尔空间示教点
+    /// @param name 示教点名称
+    /// @param rp   笛卡尔点信息
     bool getCartesianSpacePoint(const std::string &name, robpose &rp) {
         if (_cartesianSpacePoints.count(name) != 0) {
             rp = _cartesianSpacePoints[name];
@@ -373,6 +421,9 @@ public:
             return false;
     }
 
+    /// @brief 获取相应的速度限制
+    /// @param name 速度限制名称
+    /// @param sp   速度限制信息
     bool getSpeedLimit(const std::string &name, speed &sp) {
         if (_speedLimits.count(name) != 0) {
             sp = _speedLimits[name];
@@ -421,13 +472,113 @@ protected:
     bool newFtDataComing = false;
     boost::mutex _ftMutex;          // 用于力传感器读取的互斥量
 
+    bool isRunning = true;
+
+    Joystick _joystick;                 // 北通手柄
+    JoystickEvent _jsEvent{};             // 手柄按钮按下事件
+    bool isSafeButtonPressed = false;   // 安全按钮LB是否按下
+    bool isEnableButtonPressed = false; // 使能按钮START是否按下
+
+    LinearMotor _linearMotor;           //油门开度控制 直线电机
+
 protected:
     size_t getHash(const std::string &str) {
         // 获取string对象得字符串值并传递给HAHS_STRING_PIECE计算，获取得返回值为该字符串HASH值
         return HASH_STRING_PIECE(str.c_str());
     }
 
-    void boneCuttingHandler(bool &isRunning) {
+    /// @brief 处理手柄指令
+    void joystickHandler() {
+
+        while (isRunning) {
+            if (!_joystick.sample(&_jsEvent)) {
+                continue;
+            }
+
+            // 处理Button信息
+            if (_jsEvent.isButton()) {
+                switch (_jsEvent.number) {
+                    case BETOP_BUTTON_LB:
+                        if (_jsEvent.value == 0) {
+                            isSafeButtonPressed = false; //安全按钮松开
+                        } else {
+                            isSafeButtonPressed = true;  //安全按钮抬起
+                            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
+                                      << "Joystick Safe Button Pressed " << _def << std::endl;
+                        }
+                        break;
+                    case BETOP_BUTTON_A:
+                        if (_jsEvent.value != 0 && isEnableButtonPressed && isSafeButtonPressed) {
+                            //TODO: 位置减
+//                            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
+//                                      << "Joystick Position MORE " << _def << std::endl;
+                            _linearMotor.addOffset(-200);
+                        }
+                        break;
+                    case BETOP_BUTTON_Y:
+                        if (_jsEvent.value != 0 && isEnableButtonPressed && isSafeButtonPressed) {
+                            //TODO: 位置增
+//                            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
+//                                      << "Joystick Position LESS " << _def << std::endl;
+                            _linearMotor.addOffset(200);
+                        }
+                        break;
+                    case BETOP_BUTTON_START:
+                        if (_jsEvent.value != 0) {
+                            //TODO: 使能按钮，必须按下之后才可以操作
+                            isEnableButtonPressed = true;
+                        }
+                        break;
+                    case BETOP_BUTTON_BACK:
+                        if (_jsEvent.value != 0) {
+                            //TODO: 执行归位，迅速释放
+                            isEnableButtonPressed = false; //按动back，说明遇到紧急情况，使能断掉
+                            _linearMotor.setOffset(0);
+                            _linearMotor.setAccelerator(0);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+                // 处理Axis信息
+            else if (_jsEvent.isAxis()) {
+                switch (_jsEvent.number) {
+                    case BETOP_AXIS_RT:
+                        if (_jsEvent.value != 0 && isEnableButtonPressed && isSafeButtonPressed) {
+                            //TODO: 0~32767
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1)); //等待1ms
+
+        }
+
+
+//        while (isRunning) {
+//            if (_joystick.sample(&_jsEvent)) {
+//                if (_jsEvent.isButton()) {
+//                    if ((_jsEvent.number == BETOP_BUTTON_A) || (_jsEvent.number == BETOP_BUTTON_Y))
+//                        printf("Button %u is %s\n",
+//                               _jsEvent.number,
+//                               _jsEvent.value == 0 ? "up" : "down");
+//                } else if (_jsEvent.isAxis()) {
+//                    if ((_jsEvent.number == BETOP_AXIS_LT) || (_jsEvent.number == BETOP_AXIS_RT))
+//                        printf("Axis %u is at position %d\n", _jsEvent.number, _jsEvent.value);
+//                }
+//            }
+//
+//            usleep(1000);
+//        }
+
+    }
+
+    /// @brief 处理切骨逻辑
+    void boneCuttingHandler() {
 
         //六维力传感器开始循环接收数据
         auto rtMode = _ftPtr->getRealTimeDataMode();
@@ -491,6 +642,7 @@ protected:
         }
     }
 
+    /// @brief 处理六维力数据
     void ftDataHandler(std::vector<SRI::RTData<float>> &rtData) {
         //TODO: DEBUG信息输出
 //        static int count = 0;
