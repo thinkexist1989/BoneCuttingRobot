@@ -23,6 +23,8 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #ifndef BONECUTTINGROBOT_BONECUTTINGROBOT_HPP
 #define BONECUTTINGROBOT_BONECUTTINGROBOT_HPP
 
+#define BCR_VER 0.1
+
 #include <iostream>
 #include <vector>
 #include <map>
@@ -34,6 +36,8 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/format.hpp>
 #include <boost/timer/timer.hpp>
+#include <boost/asio.hpp>
+#include <boost/function.hpp>
 
 #include "RobotInterface.h"
 //#include "kinematicInterface.h"
@@ -142,7 +146,7 @@ public:
     /// @brief 开始工作线程
     void startWorkingThread() {
         isRunning = true;
-        std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING >>>>>>>>>>>" << _def
+        std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING v" << BCR_VER << " >>>>>>>>>>>" << _def
                   << std::endl;
         boost::thread(&BoneCuttingRobot::boneCuttingHandler, this).detach();
     }
@@ -196,7 +200,9 @@ public:
         }
 
         boost::thread(&LinearMotor::startProcessCyclicing, &_linearMotor).detach();
-        _linearMotor.setPositionNR();
+
+        /***** 按键检测 *****/
+        boost::thread(&BoneCuttingRobot::keyHandler, this).detach();
 
     }
 
@@ -558,23 +564,6 @@ protected:
 
         }
 
-
-//        while (isRunning) {
-//            if (_joystick.sample(&_jsEvent)) {
-//                if (_jsEvent.isButton()) {
-//                    if ((_jsEvent.number == BETOP_BUTTON_A) || (_jsEvent.number == BETOP_BUTTON_Y))
-//                        printf("Button %u is %s\n",
-//                               _jsEvent.number,
-//                               _jsEvent.value == 0 ? "up" : "down");
-//                } else if (_jsEvent.isAxis()) {
-//                    if ((_jsEvent.number == BETOP_AXIS_LT) || (_jsEvent.number == BETOP_AXIS_RT))
-//                        printf("Axis %u is at position %d\n", _jsEvent.number, _jsEvent.value);
-//                }
-//            }
-//
-//            usleep(1000);
-//        }
-
     }
 
     /// @brief 处理切骨逻辑
@@ -620,26 +609,42 @@ protected:
 //        robotPowerOn();
 //        robotPowerOff();
 
+        /// @brief 循环开始， 在这里处理切骨逻辑判断
         while (isRunning) {
             torqueTimerE(0); //阻塞等待总线数据到来
 
             //每个循环先获取一下当前机器人位姿
             auto pos = getRobotPosition();
             //TODO: DEBUG信息输出
-            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << pos[0] << "\t" << pos[1]
-                      << "\t" << pos[2] << _def << std::flush;
+            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << " pos-> " << pos[0] << "\t" << pos[1]
+                      << "\t" << pos[2] << " force-> " << _ftValue[0] << "\t" << _ftValue[1] << _def << std::flush;
 
             switch (_cutState) {
-                case CS_WAIT:
+                case CS_WAIT: //初始化后会进入这个状态
+                    //TODO：等待切骨状态处理
+//                    if() {
+//                        //1. 先等待力传感器校准
+//                        _ftState = FS_CALIBRATION;
+//                        _cutState = CS_START;
+//                    }
                     break;
                 case CS_START:
+                    //TODO:开始切骨处理
+                    cuttingStartProcess();
                     break;
-                case CS_FINISH:
+                case CS_FINISH: //切骨结束后处理，处理完回到CS_WAIT状态
+                    //TODO: 切骨完成处理
+
+                    _cutState = CS_WAIT;
                     break;
                 default:
                     break;
             }
         }
+    }
+
+    void cuttingStartProcess() {
+
     }
 
     /// @brief 处理六维力数据
@@ -661,7 +666,7 @@ protected:
 
             for (int i = 0; i < 3; i++) {
                 _ftValue[i] = ft[i];
-//                _ftFilterValue[i] = _lp2[i].update(_ftValue[i]);
+                _ftFilterValue[i] = _lp2[i].update(_ftValue[i]);
             }
 
 
@@ -692,9 +697,6 @@ protected:
                     break;
 
                 case FS_FILTER: // 进入滤波模式
-                    for (int i = 0; i < 3; i++) {
-                        _ftFilterValue[i] = _lp2[i].update(_ftValue[i]);
-                    }
 
                     break;
 
@@ -715,6 +717,33 @@ protected:
         }
 
         _ftMutex.unlock();
+
+    }
+
+    void keyHandler() {
+        boost::asio::io_service _ioService; //用于按键检测
+
+        boost::asio::posix::stream_descriptor stream(_ioService, STDIN_FILENO);
+
+        boost::asio::streambuf b;
+
+        boost::function<void(boost::system::error_code, size_t)> readHandler;
+
+        readHandler = [&](boost::system::error_code ec, size_t len) {
+            if (ec) {
+                std::cerr << "exit with " << ec.message() << std::endl;
+            } else {
+                std::istream is(&b);
+                std::string line;
+                std::getline(is, line);
+                std::cout << "keyinput ==" << line << std::endl;
+                async_read_until(stream, b, "\n", readHandler);
+            }
+        };
+
+        async_read_until(stream, b, "\n", readHandler);
+
+        _ioService.run();
 
     }
 
