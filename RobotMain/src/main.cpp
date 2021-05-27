@@ -52,8 +52,6 @@ int main(int argc, char *argv[]) {
     BoneCuttingRobot bcr;
     bcr.startWorkingThread();
 
-    Joystick joystick(0);
-
 
     //------------------------wait----------------------------------
     while (isRuning) {

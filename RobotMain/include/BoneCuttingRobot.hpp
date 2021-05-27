@@ -25,6 +25,11 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 
 #define BCR_VER 0.1
 
+#define ENABLE_ETHERCAT
+//#define ENABLE_FTSENSOR
+//#define ENABLE_JOYSTICK
+#define ENABLE_KEYBOARD
+
 #include <iostream>
 #include <vector>
 #include <map>
@@ -146,7 +151,8 @@ public:
     /// @brief 开始工作线程
     void startWorkingThread() {
         isRunning = true;
-        std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING v" << BCR_VER << " >>>>>>>>>>>" << _def
+        std::cout << _b % Color::BLUE << ">>>>>>>>>>> BONE CUTTING WORKING THREAD IS RUNNING v" << BCR_VER
+                  << " >>>>>>>>>>>" << _def
                   << std::endl;
         boost::thread(&BoneCuttingRobot::boneCuttingHandler, this).detach();
     }
@@ -158,6 +164,7 @@ public:
 
     /// @brief 初始化机器人
     void init() {
+#ifdef ENABLE_ETHERCAT
         _robotName = get_name_robotEC_deviceHandle_c(getEC_deviceName(0, NULL), 0);
         if (_robotName == nullptr) {
             std::cout << _f % Color::RED << "Robot is not initialized" << _def << std::endl;
@@ -169,6 +176,7 @@ public:
         _interval = get_BusyTs_s_c(getEC_deviceName(0, NULL)); //获取总线读取间隔 单位是秒？
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "EtherCAT bus interval is: "
                   << _interval << _def << std::endl;
+#endif
 
         /***** 读取各种所需数据 *****/
         readJointSpacePoints("/hanbing/data/robjoint.POINT"); //读取关节示教点
@@ -180,6 +188,7 @@ public:
         readCuttingOffsets("/hanbing/data/offsetpose.POINT"); //读取切骨偏移量,
 
         /***** 初始化六维力传感器 *****/
+#ifdef ENABLE_FTSENSOR
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor is initializing ...." << _def
                   << std::flush;
 
@@ -190,8 +199,10 @@ public:
 
         std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt) << "FT Sensor IP Address: "
                   << _ftPtr->getIpAddress() << _def << std::endl;
+#endif
 
         /***** 手柄遥控 *****/
+#ifdef ENABLE_JOYSTICK
         if (!_joystick.isFound()) {
             std::cout << _f % Color::YELLOW << "[WARNING]" << _timer.format(4, _fmt) << "Joystick is not found."
                       << _def << std::endl;
@@ -200,9 +211,12 @@ public:
         }
 
         boost::thread(&LinearMotor::startProcessCyclicing, &_linearMotor).detach();
+#endif
 
         /***** 按键检测 *****/
+#ifdef ENABLE_KEYBOARD
         boost::thread(&BoneCuttingRobot::keyHandler, this).detach();
+#endif
 
     }
 
@@ -487,6 +501,9 @@ protected:
 
     LinearMotor _linearMotor;           //油门开度控制 直线电机
 
+    bool _powerFlag = false;
+    bool _startFlag = false;
+
 protected:
     size_t getHash(const std::string &str) {
         // 获取string对象得字符串值并传递给HAHS_STRING_PIECE计算，获取得返回值为该字符串HASH值
@@ -509,8 +526,8 @@ protected:
                             isSafeButtonPressed = false; //安全按钮松开
                         } else {
                             isSafeButtonPressed = true;  //安全按钮抬起
-                            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
-                                      << "Joystick Safe Button Pressed " << _def << std::endl;
+//                            std::cout << _f % Color::GREEN << "[INFO]" << _timer.format(4, _fmt)
+//                                      << "Joystick Safe Button Pressed " << _def << std::endl;
                         }
                         break;
                     case BETOP_BUTTON_A:
@@ -570,10 +587,12 @@ protected:
     void boneCuttingHandler() {
 
         //六维力传感器开始循环接收数据
+#ifdef ENABLE_FTSENSOR
         auto rtMode = _ftPtr->getRealTimeDataMode();
         auto rtDataValid = _ftPtr->getRealTimeDataValid();
         _ftPtr->startRealTimeDataRepeatedly<float>(boost::bind(&BoneCuttingRobot::ftDataHandler, this, _1), rtMode,
                                                    rtDataValid);
+#endif
 
         //从示教点中读取所需的点和速度限制等
         speed speedLimit;
@@ -616,17 +635,19 @@ protected:
             //每个循环先获取一下当前机器人位姿
             auto pos = getRobotPosition();
             //TODO: DEBUG信息输出
-            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << " pos-> " << pos[0] << "\t" << pos[1]
-                      << "\t" << pos[2] << " force-> " << _ftValue[0] << "\t" << _ftValue[1] << _def << std::flush;
+//            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << " pos-> " << pos[0] << "\t" << pos[1]
+//                      << "\t" << pos[2] << " force-> " << _ftValue[0] << "\t" << _ftValue[1] << _def << std::flush;
 
             switch (_cutState) {
                 case CS_WAIT: //初始化后会进入这个状态
                     //TODO：等待切骨状态处理
-//                    if() {
-//                        //1. 先等待力传感器校准
-//                        _ftState = FS_CALIBRATION;
-//                        _cutState = CS_START;
-//                    }
+                    if(_powerFlag && _startFlag) {
+                        std::cout << _b % Color::YELLOW << ">>>>>>>>>>>START CUTTING>>>>>>>>>>>>>" << _def
+                                  << std::endl;
+                        //1. 先等待力传感器校准
+                        _ftState = FS_CALIBRATION;
+                        _cutState = CS_START;
+                    }
                     break;
                 case CS_START:
                     //TODO:开始切骨处理
@@ -736,7 +757,18 @@ protected:
                 std::istream is(&b);
                 std::string line;
                 std::getline(is, line);
-                std::cout << "keyinput ==" << line << std::endl;
+                if (line == "power") {
+                    std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << line
+                              << ": Detected Power Order."
+                              << _def << std::endl;
+                    _powerFlag = true;
+                } else if (line == "start") {
+                    std::cout << "\r" << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << line
+                              << ": Detected Start Order."
+                              << _def << std::endl;
+                    _startFlag = true;
+                }
+
                 async_read_until(stream, b, "\n", readHandler);
             }
         };
