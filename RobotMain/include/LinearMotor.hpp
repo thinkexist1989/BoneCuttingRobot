@@ -163,7 +163,7 @@ public:
             temp = (temp <= ACC_MAX && temp >= ACC_MIN) ? temp : (temp < ACC_MIN ? ACC_MIN : ACC_MAX);
 
             _pos = 2000 - temp;
-            std::cout << "[DEBUG] Linear Motor MOVE: " << temp << "\t" << _pos << std::endl;
+//            std::cout << "[DEBUG] Linear Motor MOVE: " << temp << "\t" << _pos << std::endl;
             setPositionNR();
 
             std::this_thread::sleep_for(std::chrono::milliseconds(1));

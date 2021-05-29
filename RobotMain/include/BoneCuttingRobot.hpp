@@ -26,8 +26,8 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #define BCR_VER 0.1
 
 #define ENABLE_ETHERCAT
-//#define ENABLE_FTSENSOR
-//#define ENABLE_JOYSTICK
+#define ENABLE_FTSENSOR
+#define ENABLE_JOYSTICK
 #define ENABLE_KEYBOARD
 
 #include <iostream>
@@ -135,7 +135,7 @@ public:
                          _ftGravComp(6, 0.0),
                          _ftValue(6, 0.0),
                          _ftFilterValue(6, 0.0),
-                         _lp2(6, LowPassFilter2(DELTA_T, 1 / (2 * M_PI * CUTOFF_FREQ))),
+                         _lp2(6, new LowPassFilter2(DELTA_T, 1 / (2 * M_PI * CUTOFF_FREQ))),
                          _joystick(0),
                          _linearMotor(LINEAR_MOTOR_DEV) {
 
@@ -241,7 +241,7 @@ public:
     }
 
     /// @brief 设置单轴位置
-    /// @param axisId 轴ID
+    /// @param axisId 轴ID （从1开始）
     /// @param position 期望位置
     void setAxisPosition(int axisId, double position) {
         if (_robotName == nullptr) {
@@ -487,7 +487,7 @@ protected:
     std::vector<double> _ftValue;    // 力传感器实时数据
     std::vector<double> _ftFilterValue; // 力传感器滤波后的数据
 
-    std::vector<LowPassFilter2> _lp2; // 保存2阶低通滤波器指针
+    std::vector<LowPassFilter2*> _lp2; // 保存2阶低通滤波器指针
 
     bool newFtDataComing = false;
     boost::mutex _ftMutex;          // 用于力传感器读取的互斥量
@@ -625,19 +625,20 @@ protected:
         }
 
         //先使能再下电，英立说要不这样做，会有bug
-//        robotPowerOn();
-//        robotPowerOff();
+        robotPowerOn();
+        robotPowerOff();
 
         /// @brief 循环开始， 在这里处理切骨逻辑判断
         while (isRunning) {
+//            std::cout << "[DEBUG] 1" << std::endl;
             torqueTimerE(0); //阻塞等待总线数据到来
-
+//            std::cout << "[DEBUG] 2" << std::endl;
             //每个循环先获取一下当前机器人位姿
             auto pos = getRobotPosition();
             //TODO: DEBUG信息输出
 //            std::cout << "\r" << _f % Color::MAGENTA << "[DEBUG]" << _timer.format(4, _fmt) << " pos-> " << pos[0] << "\t" << pos[1]
 //                      << "\t" << pos[2] << " force-> " << _ftValue[0] << "\t" << _ftValue[1] << _def << std::flush;
-
+//            std::cout << "[DEBUG] 3" << std::endl;
             switch (_cutState) {
                 case CS_WAIT: //初始化后会进入这个状态
                     //TODO：等待切骨状态处理
@@ -647,6 +648,8 @@ protected:
                         //1. 先等待力传感器校准
                         _ftState = FS_CALIBRATION;
                         _cutState = CS_START;
+
+                        robotPowerOn(); //机器人使能
                     }
                     break;
                 case CS_START:
@@ -665,7 +668,15 @@ protected:
     }
 
     void cuttingStartProcess() {
+        if(_ftState != FS_FILTER) {
+            return;
+        }
 
+        offsetpose op = _cuttingOffsets.front();
+
+
+        static int i = 0;
+        setAxisPosition(1, 10*sin(0.01*i++));
     }
 
     /// @brief 处理六维力数据
@@ -681,13 +692,13 @@ protected:
 //        }
 //        count++;
 
-        _ftMutex.lock();
+//        _ftMutex.lock();
 
         for (auto &ft : rtData) {
 
             for (int i = 0; i < 3; i++) {
                 _ftValue[i] = ft[i];
-                _ftFilterValue[i] = _lp2[i].update(_ftValue[i]);
+                _ftFilterValue[i] = _lp2[i]->update(_ftValue[i]);
             }
 
 
@@ -711,6 +722,10 @@ protected:
                         }
                         _ftCaliSum.resize(6, 0.0);
                         _ftCaliCount = 0;
+
+                        std::cout << _f % Color::CYAN << "[DEBUG]" << _timer.format(4, _fmt) << "Calibration done. "
+                                  << "x: " << _ftGravComp[0] << "\t" << "y: " << _ftGravComp[1] << "\t" << "z: " << _ftGravComp[2]
+                                  << _def << std::flush;
 
                         _ftState = FS_FILTER; //进入滤波模式
                     }
@@ -737,7 +752,7 @@ protected:
             newFtDataComing = true; // 新数据到来标志
         }
 
-        _ftMutex.unlock();
+//        _ftMutex.unlock();
 
     }
 
