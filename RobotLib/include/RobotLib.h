@@ -43,7 +43,12 @@ extern int rob_initialize(int robot_flag, char *path);
 
 extern int system_initialize(command_arg *arg);
 
-
+/// 关节空间运动（运动到指定关节空间位置）
+/// \param rjoint
+/// \param rspeed
+/// \param rzone
+/// \param rtool
+/// \param rwobj
 extern void moveA(robjoint *rjoint, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj);
 
 
@@ -53,6 +58,12 @@ extern void dual_moveA(robjoint *rjoint1, robjoint *rjoint2, speed *rspeed1, spe
 
 extern void multi_moveA(robjoint *rjoint, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj, int _index);
 
+/// 关节空间运动（运动到笛卡尔空间位置）
+/// \param rpose
+/// \param rspeed
+/// \param rzone
+/// \param rtool
+/// \param rwobj
 extern void moveJ(robpose *rpose, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj);
 
 
@@ -63,7 +74,12 @@ dual_moveJ(robpose *rpose1, robpose *rpose2, speed *rspeed1, speed *rspeed2, zon
 
 extern void multi_moveJ(robpose *rpose, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj, int _index);
 
-
+/// 笛卡尔空间直线运动
+/// \param rpose 目标位姿
+/// \param rspeed 速度限制
+/// \param rzone 可以为NULL
+/// \param rtool 可以为NULL
+/// \param rwobj 可以为NULL
 extern void moveL(robpose *rpose, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj);
 
 
@@ -74,6 +90,13 @@ dual_moveL(robpose *rpose1, robpose *rpose2, speed *rspeed1, speed *rspeed2, zon
 
 extern void multi_moveL(robpose *rpose, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj, int _index);
 
+/// 笛卡尔空间圆弧运动
+/// \param rpose
+/// \param rpose_mid
+/// \param rspeed
+/// \param rzone
+/// \param rtool
+/// \param rwobj
 extern void moveC(robpose *rpose, robpose *rpose_mid, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj);
 
 extern void
@@ -84,7 +107,13 @@ dual_moveC(robpose *rpose1, robpose *rpose2, robpose *rpose_mid1, robpose *rpose
 extern void
 multi_moveC(robpose *rpose, robpose *rpose_mid, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj, int _index);
 
-
+///
+/// \param rpose
+/// \param rpose_mid
+/// \param rspeed
+/// \param rzone
+/// \param rtool
+/// \param rwobj
 extern void moveT(robpose *rpose, robpose *rpose_mid, speed *rspeed, zone *rzone, tool *rtool, wobj *rwobj);
 
 
@@ -113,10 +142,16 @@ extern void move_stop();
 
 extern int getrobjoint2(char *J, robjoint *rjoint, int _index);
 
-
+/// @brief 从示教点robjoint中获取关节位置
+/// \param J
+/// \param rjoint
+/// \return
 extern int getrobjoint(char *J, robjoint *rjoint);
 
-
+/// @brief 从示教点robpose中获取末端位姿
+/// \param P
+/// \param rpose
+/// \return
 extern int getrobpose(char *P, robpose *rpose);
 
 
@@ -163,14 +198,14 @@ extern void SetAo(int id, double flag);
 
 extern void GetAi(int id, double *flag);
 
-///
-/// \param rpose
-/// \param x
-/// \param y
-/// \param z
-/// \param k
-/// \param p
-/// \param s
+/// 获取机器人偏移后的位姿（笛卡尔坐标系）
+/// \param rpose 基准位姿
+/// \param x x方向偏移
+/// \param y y方向偏移
+/// \param z z方向偏移
+/// \param k k方向偏移
+/// \param p p方向偏移
+/// \param s s方向偏移
 /// \return
 extern robpose Offs(const robpose *rpose, double x, double y, double z, double k, double p, double s);
 

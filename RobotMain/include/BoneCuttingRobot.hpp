@@ -276,6 +276,35 @@ public:
         return _axisPositions;
     }
 
+    bool isTargetEndEffectorPositionReached(const robpose& rpose) {
+
+        return false;
+    }
+
+    bool isTargetJointPositionReached(const robjoint& rjoint) {
+
+        return false;
+    }
+
+    bool isTargetOffsetReached(const offsetpose& roffsetpose) {
+
+        return false;
+    }
+
+    /// @brief 获取基于基准位姿偏移后的末端位姿
+    /// \return
+    robpose getEndEffectPoseAfterOffset(const robpose& rpose, const offsetpose& opose) {
+        return Offs(&rpose, opose.x, opose.y, 0, 0, 0, opose.a); // 这个不知道对不对？
+    }
+
+    void moveLine(const robpose& rpose, const speed& rspeed) {
+        moveL(const_cast<robpose*>(&rpose), const_cast<speed*>(&rspeed), NULL, NULL, NULL);
+    }
+
+    void moveCircle(const robpose& rpose, const robpose& rpose_mid, const speed& rspeed) {
+        moveC(const_cast<robpose*>(&rpose), const_cast<robpose*>(&rpose_mid), const_cast<speed*>(&rspeed), NULL, NULL, NULL);
+    }
+
     /// @brief 从robjoint.POINT中读取关节空间示教点
     /// @param fileName 保存有关节空间示教点的文件
     void readJointSpacePoints(const std::string &fileName) {
@@ -504,6 +533,11 @@ protected:
     bool _powerFlag = false;
     bool _startFlag = false;
 
+    //从示教点中读取所需的点和速度限制等
+    speed _speedLimit;
+    robpose _p0;
+    robjoint _j0;
+
 protected:
     size_t getHash(const std::string &str) {
         // 获取string对象得字符串值并传递给HAHS_STRING_PIECE计算，获取得返回值为该字符串HASH值
@@ -594,12 +628,7 @@ protected:
                                                    rtDataValid);
 #endif
 
-        //从示教点中读取所需的点和速度限制等
-        speed speedLimit;
-        robpose p0;
-        robjoint j0;
-
-        if (!getSpeedLimit(SPEED_LIMIT, speedLimit)) {
+        if (!getSpeedLimit(SPEED_LIMIT, _speedLimit)) {
             std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt) << "Can not get speed limit named >"
                       << SPEED_LIMIT << "<" << _def << std::endl;
         } else {
@@ -608,7 +637,7 @@ protected:
                       << SPEED_LIMIT << "<" << _def << std::endl;
         }
 
-        if (!getJointSpacePoint(J0, j0)) {
+        if (!getJointSpacePoint(J0, _j0)) {
             std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt)
                       << "Can not get joint space point named >" << J0 << "<" << _def << std::endl;
         } else {
@@ -616,7 +645,7 @@ protected:
                       << "Successfully get joint space point named >" << J0 << "<" << _def << std::endl;
         }
 
-        if (!getCartesianSpacePoint(P0, p0)) {
+        if (!getCartesianSpacePoint(P0, _p0)) {
             std::cout << _f % Color::RED << "[ERROR]" << _timer.format(4, _fmt)
                       << "Can not get cartesian space point named >" << P0 << "<" << _def << std::endl;
         } else {
@@ -672,7 +701,7 @@ protected:
             return;
         }
 
-        offsetpose op = _cuttingOffsets.front();
+        offsetpose op = _cuttingOffsets.front(); // 读取偏移点FIFO的栈顶点
 
 
         static int i = 0;
