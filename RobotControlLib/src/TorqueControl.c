@@ -45,6 +45,7 @@ float offset_X[9] = {10, 10, 20, 30, 40, -10, -20, -30, -40};
 int _mode = 8;
 
 void torqueControl() {
+
     char *robot_name = NULL;
     robot_name = get_name_robotEC_deviceHandle_c(getEC_deviceName(0, NULL), 0);
     size_t nbytes;
