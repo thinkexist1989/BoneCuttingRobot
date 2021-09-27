@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <csignal>
 
+#include <QtCore>
+
 #include "functionTest.h"
 //#include"RobotControl.h"
 #include "RobotLib.h"
@@ -33,6 +35,10 @@ void signalHandler(int signo) {
 }
 
 int main(int argc, char *argv[]) {
+
+    QCoreApplication a(argc, argv);
+
+    //---------------------八室初始化----------------------------
     int err = 0;
     command_arg arg;
     err = commandLineParser(argc, argv, &arg);
@@ -54,9 +60,5 @@ int main(int argc, char *argv[]) {
 
 
     //------------------------wait----------------------------------
-    while (isRuning) {
-
-        sleep(1);
-    }
-    return EXIT_SUCCESS;
+    return a.exec();
 }
