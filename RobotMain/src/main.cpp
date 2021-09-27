@@ -56,14 +56,14 @@ int main(int argc, char *argv[]) {
 //        return -1;
 //    }
 
-    SRI::CommEthernet* ce = new SRI::CommEthernet("192.168.1.108", 4008);
-    SRI::FTSensor sensor(ce);
+//    SRI::FTSensor sensor(ce);
+//    SRI::CommEthernet* ce = new SRI::CommEthernet("192.168.1.108", 4008);
 
-    std::cout << "IP Address: " << sensor.getIpAddress() << std::endl;
-    auto rtMode = sensor.getRealTimeDataMode();
-    auto rtDataValid = sensor.getRealTimeDataValid();
+//    std::cout << "IP Address: " << sensor.getIpAddress() << std::endl;
+ //   auto rtMode = sensor.getRealTimeDataMode();
+//    auto rtDataValid = sensor.getRealTimeDataValid();
 
-    auto rtData = sensor.getRealTimeDataOnce<float>(rtMode,rtDataValid);
+//    auto rtData = sensor.getRealTimeDataOnce<float>(rtMode,rtDataValid);
 
 
     //------------------------wait----------------------------------
