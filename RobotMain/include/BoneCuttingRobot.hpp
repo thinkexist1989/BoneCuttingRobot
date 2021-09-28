@@ -26,7 +26,7 @@ Shenyang Institute of Automation, Chinese Academy of Sciences.
 #define BCR_VER 0.1
 
 #define ENABLE_ETHERCAT
-#define ENABLE_FTSENSOR
+//#define ENABLE_FTSENSOR
 #define ENABLE_JOYSTICK
 //#define ENABLE_KEYBOARD
 
@@ -195,7 +195,7 @@ public:
                   << " >>>>>>>>>>>" << _def
                   << std::endl;
 //        boost::thread(&BoneCuttingRobot::boneCuttingHandler, this).detach();
-        boost::thread(&BoneCuttingRobot::boneCuttingYL, this).detach();
+//        boost::thread(&BoneCuttingRobot::boneCuttingYL, this).detach();
     }
 
     /// @brief 停止工作线程
